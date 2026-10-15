@@ -279,7 +279,11 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
       <button class="btn danger" id="clearSent">پاک کردن ثبت‌های ارسال‌شده</button>
       <p class="help">ثبت‌ها تا وقتی پاکشان نکنید روی همین گوشی می‌مانند، حتی بدون اینترنت. فقط بعد از اینکه فایل روی کامپیوتر رسید، پاک کنید.</p>
     </div>
-    <div class="card help" id="aboutBox"></div>
+    <div class="card stack">
+      <div class="help" id="aboutBox"></div>
+      <button class="btn ghost" id="updBtn">به‌روزرسانی برنامه</button>
+      <p class="help">اگر نسخه تازه‌ای روی سایت گذاشته شده و اینجا هنوز نسخه قبلی نوشته شده، با اینترنت این دکمه را بزنید. ثبت‌ها، نام و رمز پاک نمی‌شوند.</p>
+    </div>
   </section>
 </main>
 
@@ -1194,7 +1198,15 @@ let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; $("#installBtn").hidden = false; });
 $("#installBtn").addEventListener("click", async () => { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch(e) {} deferredInstall = null; $("#installBtn").hidden = true; });
 
-$("#aboutBox").innerHTML = "نسخه 6. فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
+// fresh copy of the app from the site: drops the offline copy (not the records, kept in localStorage) and reloads
+$("#updBtn").addEventListener("click", async () => {
+  if (!navigator.onLine) { fail("برای به‌روزرسانی، اینترنت گوشی را روشن کنید."); return; }
+  say("در حال گرفتن نسخه تازه…", "info");
+  try { const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch(e) {}
+  try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch(e) {}
+  location.reload();
+});
+$("#aboutBox").innerHTML = "<b>نسخه 6.1</b>. فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
 window.__wsc = {onScan, state: () => st, records: () => records, finishDoc, list: () => recList, sugItems, lineFlags, pkey, lkey};
 if (DOC_MODES.has(st.mode)) st.step = "doc";

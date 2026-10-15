@@ -1,20 +1,34 @@
 // Offline cache for the warehouse scanner. Bump CACHE when any file changes.
-const CACHE = "wsc-v6";
+// Pages and small scripts: network first (a new version shows on the next open when there is internet),
+// cache when offline or slow. Large files that never change (barcode reader, fonts, icons): cache first.
+const CACHE = "wsc-v6.1";
 const FILES = ["./", "index.html", "locations.js", "zxing-reader.js", "zxing_reader.wasm", "manifest.webmanifest",
   "icon-192.png", "icon-512.png", "Vazirmatn-Regular.woff2", "Vazirmatn-Bold.woff2", "report.html"];
+const STATIC = /(\.wasm|\.woff2|\.png|zxing-reader\.js)$/;
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // "reload": never fill a new cache from the browser's own HTTP cache, which may still hold the old version
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, {cache: "reload"})))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
-// cache first, refresh in the background, so the app opens without a network
 self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
+  if (e.request.method !== "GET") return;
+  const url = new URL(e.request.url);
+  if (url.origin !== location.origin) return;
+  const key = url.origin + url.pathname;
+  if (STATIC.test(url.pathname)) {
+    e.respondWith(caches.open(CACHE).then(async c => (await c.match(key)) ||
+      fetch(e.request).then(r => { if (r.ok) c.put(key, r.clone()); return r; })));
+    return;
+  }
   e.respondWith(caches.open(CACHE).then(async c => {
-    const hit = await c.match(e.request, {ignoreSearch: true});
-    const net = fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => null);
-    return hit || (await net) || c.match("index.html");
+    const net = fetch(new Request(url.href, {cache: "no-cache", credentials: "same-origin"}))
+      .then(r => { if (r.ok) c.put(key, r.clone()); return r; }).catch(() => null);
+    const slow = new Promise(res => setTimeout(() => res(null), 4000));
+    const r = await Promise.race([net, slow]);
+    if (r && r.ok) return r;
+    return (await c.match(key)) || (await net) || (await c.match(url.origin + url.pathname.replace(/[^/]*$/, "") + "index.html")) || Response.error();
   }));
 });
