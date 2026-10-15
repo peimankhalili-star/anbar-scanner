@@ -98,6 +98,13 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 .sugi .row{margin-top:6px;flex-wrap:wrap}
 .sugi .row > *{flex:0 0 auto}
 .sugi .btn{padding:10px 18px}
+.pinfo{margin-top:10px;background:#F7F5EF;border:1px solid var(--line);border-radius:10px;padding:10px 12px;line-height:1.8}
+.pinfo b.lbl{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.pinfo .pname{display:block;font-weight:700;font-size:16px}
+.pinfo .pcars{display:block;font-size:14px}
+.pinfo .psrc{display:block;color:var(--muted);font-size:12px}
+.pinfo .muted{color:var(--muted);font-weight:400}
+.list .nm{font-size:13px;color:var(--muted)}
 .sugi bdi.code{white-space:nowrap}
 .sugi.first{border:2px solid var(--accent);background:#FFF8DD}
 [hidden]{display:none!important}
@@ -220,6 +227,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
         <div class="pill" id="pPart"><b>قطعه</b><span id="pPartVal">—</span></div>
         <div class="pill" id="pTo" hidden><b>مقصد</b><span id="pToVal">—</span></div>
       </div>
+      <div class="pinfo" id="partInfo" hidden></div>
       <div class="qty" id="qtyBox" hidden>
         <button class="pm" id="qMinus" aria-label="کم کردن">−</button>
         <input id="qty" type="number" inputmode="numeric" min="1" step="1" value="1" aria-label="تعداد">
@@ -304,6 +312,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 </nav>
 
 <script src="locations.js"></script>
+<script src="parts.js"></script>
 <script src="zxing-reader.js"></script>
 <script>
 (function(){
@@ -348,6 +357,7 @@ let recList = load(K_LIST, null);
 let st = {mode: settings.lastMode && MODE_FA[settings.lastMode] && settings.lastMode !== "pick" ? settings.lastMode : "rcv",
   step:"loc", loc:null, part:null, qty:1, toLoc:null, manualQty:false, doc:null,
   hdr:{type:null, rec:null, ref:"", party:""},
+  lastPart:null,  // last part code scanned in any mode: its name and cars are shown under the pills
   pending:null,   // receipt: part scanned before its reception was chosen; saved as the first line of the document
   sug:null};      // receipt: receptions waiting for the pending part
 
@@ -388,6 +398,28 @@ function locLabel(c){
   if (/^RTN/.test(c)) return "برگشتی و معیوب";
   if (/^VAL/.test(c)) return "ارزشمند";
   return "منطقه مشترک";
+}
+
+// ---------- parts catalogue (parts.js): name and the cars a part fits ----------
+// by the scanned code, its supply code (S11-3502010-01), or a variant suffix (-GB1) as a "similar code"
+function partLookup(pc){
+  if (typeof WS_PARTS === "undefined" || !pc) return null;
+  const P = WS_PARTS.p, A = WS_PARTS.a || {}, c = norm(pc), k = pkey(c);
+  let key = [c, A[c], k, A[k]].find(x => x && P[x]), sim = false;
+  if (!key && lkey(c) !== k && P[lkey(c)]) { key = lkey(c); sim = true; }
+  if (!key) return null;
+  const e = P[key];
+  return {code: key, name: e[0], cars: e[1] ? e[1].split(",").map(i => WS_PARTS.m[+i]) : [], src: e[2] || 0, sim};
+}
+function partName(pc){ const x = partLookup(pc); return x ? " · " + esc(x.name) : ""; }
+function partBox(pc){
+  if (typeof WS_PARTS === "undefined") return "";
+  const x = partLookup(pc);
+  if (!x) return '<b class="lbl">قطعه ' + code(pc) + '</b><span class="muted">در فهرست قطعات برنامه نیست.</span>';
+  return '<b class="lbl">قطعه ' + code(pc) + (x.sim ? ' · نزدیک‌ترین کد در فهرست: ' + code(x.code) : "") + "</b>" +
+    '<span class="pname">' + esc(x.name) + "</span>" +
+    (x.cars.length ? '<span class="pcars">برای: ' + x.cars.map(c => "<bdi dir=\"rtl\">" + esc(c) + "</bdi>").join("، ") + "</span>" : '<span class="pcars muted">خودروی آن در فهرست نیامده است.</span>') +
+    (x.src ? '<span class="psrc">منبع: ' + esc(WS_PARTS.src[x.src]) + "</span>" : "");
 }
 
 // ---------- receptions list ----------
@@ -535,8 +567,8 @@ function openSug(pc){
   st.pending = pc;
   const items = sugItems(pc);
   st.sug = {code: pc, items};
-  if (items.length === 1) ok("قطعه " + code(pc) + ": پذیرش " + code(items[0].L.r) + " منتظر این قطعه است. برای تأیید، دکمه رسید را بزنید.");
-  else if (items.length) ok("قطعه " + code(pc) + ": " + items.length + " پذیرش منتظر این قطعه‌اند. پذیرش درست را انتخاب کنید.");
+  if (items.length === 1) ok("قطعه " + code(pc) + partName(pc) + ": پذیرش " + code(items[0].L.r) + " منتظر این قطعه است. برای تأیید، دکمه رسید را بزنید.");
+  else if (items.length) ok("قطعه " + code(pc) + partName(pc) + ": " + items.length + " پذیرش منتظر این قطعه‌اند. پذیرش درست را انتخاب کنید.");
   else fail("قطعه " + code(pc) + " در درخواست هیچ پذیرش بازی نیست (فهرست " + esc(recList.need.made || "") + "). اگر شارژ انبار است، «شارژ انبار» را بزنید.");
 }
 function applySug(r, type){
@@ -551,7 +583,7 @@ function applySug(r, type){
 // the part goes on the document line being filled, with any request warning
 function setPart(pc, prefix){
   st.part = pc; st.step = "qty"; st.manualQty = false; setQty(1);
-  const f = lineFlags(pc, 1), head = (prefix || "") + "قطعه " + code(pc) + " | تعداد 1";
+  const f = lineFlags(pc, 1), head = (prefix || "") + "قطعه " + code(pc) + partName(pc) + " | تعداد 1";
   if (f.warn) { say(head + "<br>" + f.warn, "err"); beep(false); }
   else ok(head + f.info);
 }
@@ -590,6 +622,7 @@ function onScan(raw, src){
   if (!c0) return;
   const c = classify(c0);
   if (c.kind === "badloc") { fail("کد " + code(c0) + " شبیه آدرس است، ولی در فهرست مکان‌های انبار نیست."); return; }
+  if (c.kind === "part") st.lastPart = c.code;
   if (st.mode === "move") { moveFlow(c); render(); return; }
   if (DOC_MODES.has(st.mode)) { docFlow(c); render(); return; }
   if (c.kind === "rec" || c.kind === "vin") { fail("این بارکد پذیرش است. برای رسید، تحویل یا برگشت، اول همان حالت را انتخاب کنید."); return; }
@@ -606,7 +639,7 @@ function onScan(raw, src){
     if (!commit()) return;
   }
   st.part = c.code; st.step = "qty"; st.manualQty = false; setQty(1);
-  ok("قطعه " + code(c.code));
+  ok("قطعه " + code(c.code) + partName(c.code));
   render();
 }
 function addOne(){
@@ -662,7 +695,7 @@ function moveFlow(c){
   }
   if (st.step === "part") {
     if (c.kind === "loc") { st.loc = c.code; ok("مبدأ عوض شد: " + code(c.code)); return; }
-    st.part = c.code; st.step = "qty"; setQty(1); ok("قطعه " + code(c.code) + ". حالا بارکد مکان مقصد را اسکن کنید."); return;
+    st.part = c.code; st.step = "qty"; setQty(1); ok("قطعه " + code(c.code) + partName(c.code) + ". حالا بارکد مکان مقصد را اسکن کنید."); return;
   }
   // step qty: waiting for destination
   if (c.kind === "part") {
@@ -735,7 +768,7 @@ function recItem(r, withDel){
   const where = (r.loc ? code(r.loc) : "") + (r.toLoc ? " ← " + code(r.toLoc) : "");
   const head = (r.dtype ? esc(r.dtype) : "") + (r.rec ? " | پذیرش " + code(r.rec) : "") + (r.ref ? " | سند " + code(r.ref) : "");
   return '<li><span class="tag ' + esc(r.mode) + '">' + esc(MODE_FA[r.mode] || r.mode) + '</span>' +
-    '<div class="what">' + code(r.part) + " × " + r.qty + "<small>" + (head ? head + " | " : "") + (where ? where + " | " : "") + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
+    '<div class="what">' + code(r.part) + " × " + r.qty + (partLookup(r.part) ? ' <span class="nm">' + esc(partLookup(r.part).name) + "</span>" : "") + "<small>" + (head ? head + " | " : "") + (where ? where + " | " : "") + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
     (r.sent ? ' | <span class="sent">ارسال‌شده</span>' : "") + (r.note ? " | " + esc(r.note) : "") + "</small></div>" +
     (withDel ? '<button class="del" data-del="' + esc(r.id) + '">حذف</button>' : "") + "</li>";
 }
@@ -805,6 +838,9 @@ function render(){
   $("#stepText").textContent = stepText();
   $("#pLocLbl").textContent = st.mode === "move" ? "مبدأ" : isDoc ? "مکان (اختیاری)" : "مکان";
   $("#pLocVal").innerHTML = st.loc ? code(st.loc) + " " + esc(locLabel(st.loc)) : "—";
+  const pi = st.part || st.pending || st.lastPart;
+  $("#partInfo").hidden = !pi || typeof WS_PARTS === "undefined";
+  if (pi) $("#partInfo").innerHTML = partBox(pi);
   $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + st.qty : st.pending ? code(st.pending) + " <small>منتظر انتخاب پذیرش</small>" : "—";
   $("#pLoc").classList.toggle("on", st.step === "loc");
   $("#pPart").classList.toggle("on", st.step === "part");
@@ -1206,7 +1242,7 @@ $("#updBtn").addEventListener("click", async () => {
   try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch(e) {}
   location.reload();
 });
-$("#aboutBox").innerHTML = "<b>نسخه 6.1</b>. فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
+$("#aboutBox").innerHTML = "<b>نسخه 6.2</b>. " + (typeof WS_PARTS !== "undefined" ? "فهرست قطعات: " + Object.keys(WS_PARTS.p).length + " کد، نسخه " + esc(WS_PARTS.v) + ". " : "") + "فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
 window.__wsc = {onScan, state: () => st, records: () => records, finishDoc, list: () => recList, sugItems, lineFlags, pkey, lkey};
 if (DOC_MODES.has(st.mode)) st.step = "doc";

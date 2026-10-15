@@ -141,7 +141,7 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
     <p class="help" id="shown"></p>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>تاریخ</th><th>ساعت</th><th>کارمند</th><th>عملیات</th><th>نوع سند</th><th>پذیرش</th><th>شاسی</th><th>مکان</th><th>مکان مقصد</th><th>کد قطعه</th><th>تعداد</th><th>سند مرجع</th><th>شناسه سند</th></tr></thead>
+        <thead><tr><th>تاریخ</th><th>ساعت</th><th>کارمند</th><th>عملیات</th><th>نوع سند</th><th>پذیرش</th><th>شاسی</th><th>مکان</th><th>مکان مقصد</th><th>کد قطعه</th><th>نام قطعه</th><th>تعداد</th><th>سند مرجع</th><th>شناسه سند</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
@@ -169,6 +169,7 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
   </div>
 </main>
 <div id="printArea"></div>
+<script src="parts.js"></script>
 <script>
 (function(){
 "use strict";
@@ -277,6 +278,17 @@ function renderNeed(){
     "</td><td>" + o.q + "</td><td>" + o.s + "</td><td>" + (o.rcv || "") + "</td><td>" + (o.iss || "") + "</td><td>" + (o.vor ? code(o.vor) : "") + "</td><td>" + esc(o.n) + "</td><td>" + (o.c ? code(o.c) : "") + "</td></tr>").join("");
 }
 
+// ---------- parts catalogue (parts.js): name and cars of a part code ----------
+function pinfo(pc){
+  if (typeof WS_PARTS === "undefined" || !pc) return {name:"", cars:""};
+  const P = WS_PARTS.p, A = WS_PARTS.a || {}, c = pnorm(pc), k = pkey(c);
+  let key = [c, A[c], k, A[k]].find(x => x && P[x]);
+  if (!key && P[lkey(c)]) key = lkey(c);
+  if (!key) return {name:"", cars:""};
+  const e = P[key];
+  return {name: e[0], cars: e[1] ? e[1].split(",").map(i => WS_PARTS.m[+i]).join("، ") : ""};
+}
+
 // ---------- view ----------
 function sorted(){ return Array.from(all.values()).sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0); }
 function filtered(){
@@ -302,7 +314,8 @@ function partSummary(rows){
   const sum = m => mine.filter(r => r.mode === m).reduce((a, r) => a + r.qty, 0);
   const lastCount = mine.find(r => r.mode === M.count);
   const pill = (k, v) => '<div class="pill"><small>' + esc(k) + "</small>" + v + "</div>";
-  return pill("قطعه", code(last.part)) + pill("تعداد ثبت", mine.length) + pill("آخرین مکان", last.toLoc || last.loc ? code(last.toLoc || last.loc) : "—") +
+  const pi = pinfo(last.part);
+  return pill("قطعه", code(last.part) + (pi.name ? " · " + esc(pi.name) : "")) + (pi.cars ? pill("برای خودروهای", esc(pi.cars)) : "") + pill("تعداد ثبت", mine.length) + pill("آخرین مکان", last.toLoc || last.loc ? code(last.toLoc || last.loc) : "—") +
     pill("آخرین ثبت", esc(last.date + " " + last.time.slice(0, 5)) + "، " + esc(last.user)) +
     pill("جمع رسید", sum(M.rcv)) + pill("جمع تحویل پذیرش", sum(M.iss)) + pill("جمع خروج", sum(M.out)) + pill("جمع برگشت", sum(M.ret)) +
     pill("آخرین شمارش", lastCount ? lastCount.qty + " در " + code(lastCount.loc) + "، " + esc(lastCount.date) : "—");
@@ -332,7 +345,7 @@ function render(){
   $("#shown").textContent = rows.length + " ثبت" + (rows.length > LIMIT ? "؛ " + LIMIT + " ثبت آخر نشان داده شده. همه در فایل Excel هست." : "");
   const c = v => v ? code(v) : "";
   $("#rows").innerHTML = rows.slice(0, LIMIT).map(r => "<tr><td>" + code(r.date) + "</td><td>" + code(r.time) + "</td><td>" + esc(r.user) + "</td><td>" + esc(r.mode) +
-    "</td><td>" + esc(r.dtype) + "</td><td>" + c(r.rec) + "</td><td>" + c(r.chassis) + "</td><td>" + c(r.loc) + "</td><td>" + c(r.toLoc) + "</td><td>" + code(r.part) + "</td><td>" + r.qty +
+    "</td><td>" + esc(r.dtype) + "</td><td>" + c(r.rec) + "</td><td>" + c(r.chassis) + "</td><td>" + c(r.loc) + "</td><td>" + c(r.toLoc) + "</td><td>" + code(r.part) + "</td><td>" + esc(pinfo(r.part).name) + "</td><td>" + r.qty +
     "</td><td>" + c(r.ref) + "</td><td>" + c(r.doc) + "</td></tr>").join("");
 }
 
@@ -756,10 +769,10 @@ function buildXlsx(){
   const DATA = "'همه ثبت‌ها'", SRCH = "'جست‌وجوی قطعه'";
   const HELP = col(HEAD.length);     // hidden helper column after the data columns
   // 1. all scans, with a helper column counting matches of the searched part
-  const allRows = [HEAD.concat(["شماره تطابق"])].concat(recs.map((r, i) => {
-    const n = i + 2;
+  const allRows = [HEAD.concat(["شماره تطابق", "نام قطعه", "خودروها"])].concat(recs.map((r, i) => {
+    const n = i + 2, pi = pinfo(r.part);
     return [r.id, r.date, r.time, r.ts, r.user, r.device, r.mode, r.loc, r.toLoc, r.part, r.qty, r.note, r.doc, r.dtype, r.rec, r.chassis, r.ref, r.party, r.ch,
-      {f: "IF(" + SRCH + "!$B$2=\"\",\"\",IF(J" + n + "=" + SRCH + "!$B$2,COUNTIF($J$2:J" + n + "," + SRCH + "!$B$2),\"\"))"}];
+      {f: "IF(" + SRCH + "!$B$2=\"\",\"\",IF(J" + n + "=" + SRCH + "!$B$2,COUNTIF($J$2:J" + n + "," + SRCH + "!$B$2),\"\"))"}, pi.name, pi.cars];
   }));
   // 2. part search: type a code in B2
   const R0 = 5, MAXR = 200;
@@ -794,11 +807,12 @@ function buildXlsx(){
   // 5. part summary
   const byPart = new Map();
   recs.forEach(r => { if (!byPart.has(r.part)) byPart.set(r.part, []); byPart.get(r.part).push(r); });
-  const parts = [["کد قطعه", "تعداد ثبت", "آخرین مکان", "آخرین عملیات", "آخرین تاریخ", "آخرین کارمند", "جمع رسید", "جمع چیدن", "جمع تحویل پذیرش", "جمع خروج", "جمع برگشت", "آخرین شمارش", "مکان آخرین شمارش"]];
+  const parts = [["کد قطعه", "نام قطعه", "خودروها", "تعداد ثبت", "آخرین مکان", "آخرین عملیات", "آخرین تاریخ", "آخرین کارمند", "جمع رسید", "جمع چیدن", "جمع تحویل پذیرش", "جمع خروج", "جمع برگشت", "آخرین شمارش", "مکان آخرین شمارش"]];
   Array.from(byPart.keys()).sort().forEach(p => {
     const m = byPart.get(p), l = m[0], lc = m.find(r => r.mode === M.count);
     const sum = mode => m.filter(r => r.mode === mode).reduce((a, r) => a + r.qty, 0);
-    parts.push([p, m.length, l.toLoc || l.loc, l.mode, l.date, l.user, sum(M.rcv), sum(M.put), sum(M.iss), sum(M.out), sum(M.ret), lc ? lc.qty : "", lc ? lc.loc : ""]);
+    const pi = pinfo(p);
+    parts.push([p, pi.name, pi.cars, m.length, l.toLoc || l.loc, l.mode, l.date, l.user, sum(M.rcv), sum(M.put), sum(M.iss), sum(M.out), sum(M.ret), lc ? lc.qty : "", lc ? lc.loc : ""]);
   });
   // 6. staff per day
   const byStaff = new Map();
@@ -811,10 +825,11 @@ function buildXlsx(){
       style:(ri, ci) => ri === 1 && ci === 1 ? 2 : (ri === 0 || (ri === 1 && (ci === 0 || ci === 2 || ci === 4))) ? 3 : (ri >= 4 && ci < 12 ? 4 : 0)},
     {name:"پذیرش‌ها", rows:recSheet, widths:[16, 22, 18, 9, 10, 12, 12, 18, 18], headerRow:0, freezeRows:1, filter:true},
     {name:"اسناد", rows:docSheet, widths:[20, 12, 10, 18, 8, 14, 18, 16, 22, 12, 16, 18, 10, 10], headerRow:0, freezeRows:1, filter:true},
-    {name:"خلاصه قطعه‌ها", rows:parts, widths:[18, 10, 12, 14, 12, 18, 10, 10, 14, 10, 10, 12, 16], headerRow:0, freezeRows:1, filter:true},
+    {name:"خلاصه قطعه‌ها", rows:parts, widths:[18, 30, 40, 10, 12, 14, 12, 18, 10, 10, 14, 10, 10, 12, 16], headerRow:0, freezeRows:1, filter:true},
     {name:"کارمندان", rows:staff, widths:[20, 12, 10, 10, 14], headerRow:0, freezeRows:1, filter:true},
     {name:"همه ثبت‌ها", rows:allRows, widths:[20, 12, 10, 24, 18, 8, 14, 10, 10, 18, 8, 14, 20, 16, 14, 20, 14, 16, 12, 10], hidden:[HEAD.length], headerRow:0, freezeRows:1, filter:true}
   ];
+  sheets[sheets.length - 1].widths.push(30, 40);
   // 7. open requests of the system against the scans (only when the open-requests file was loaded)
   if (listOut && listOut.need) {
     const nr = [["پذیرش", "شاسی", "کد قطعه", "عنوان قطعه", "درخواستی", "موجودی سیستم", "VOR / شماره سفارش", "رسید اسکن‌شده", "تحویل اسکن‌شده", "وضعیت"]]
