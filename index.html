@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F2A33">
+<title>اسکنر انبار</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@font-face{font-family:Vazirmatn;src:url(Vazirmatn-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Vazirmatn;src:url(Vazirmatn-Bold.woff2) format("woff2");font-weight:700;font-display:swap}
+:root{--bg:#F6F4EF;--card:#FFFFFF;--ink:#1F2A33;--muted:#5A6570;--line:#E2DED5;--accent:#F2B705;--accent-ink:#5C3F00;--ok:#1E7B3A;--ok-bg:#E3F3E7;--err:#B00D26;--err-bg:#FBE4E7;--dark:#1F2A33}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif;font-size:16px}
+body{min-height:100vh;padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+button,input{font-family:inherit;font-size:inherit;color:inherit}
+bdi.code{font-family:Vazirmatn,monospace;font-weight:700;direction:ltr;unicode-bidi:isolate}
+header{position:sticky;top:0;z-index:5;background:var(--dark);color:#F6F4EF;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:4px solid var(--accent)}
+header h1{font-size:18px;margin:0;flex:1}
+.chip{border:1px solid #4A5966;border-radius:999px;padding:4px 12px;background:transparent;color:#F6F4EF;font-size:14px}
+.chip.badge{background:var(--accent);color:var(--dark);border-color:var(--accent);font-weight:700}
+main{padding:12px 12px 0;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.modes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.modes button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 4px;font-weight:700;font-size:14px}
+.modes button[aria-pressed=true]{background:var(--dark);color:#F6F4EF;border-color:var(--dark)}
+.cam{position:relative;background:#111;border-radius:14px;overflow:hidden;aspect-ratio:16/10;margin-bottom:10px}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .guide{position:absolute;left:5%;right:5%;top:25%;bottom:25%;border:3px solid var(--accent);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+.cam .off{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#F6F4EF;text-align:center;padding:16px}
+.cam .tools{position:absolute;bottom:8px;left:8px;display:flex;gap:6px}
+.cam .tools button{background:rgba(31,42,51,.8);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px;font-size:14px}
+.btn{border:none;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--dark);color:#F6F4EF}
+.btn.accent{background:var(--accent);color:var(--dark)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--err-bg);color:var(--err);border:1px solid #F2B8C0}
+.btn:disabled{opacity:.45}
+.step{font-size:20px;font-weight:700;margin:2px 0 8px}
+.state{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border-radius:10px;padding:8px 10px;background:#F1EEE7;border:1px solid var(--line);font-size:15px}
+.pill b{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.pill.on{background:#FFF4CC;border-color:var(--accent)}
+.qty{display:flex;align-items:center;gap:8px;margin-top:10px}
+.qty input{width:96px;text-align:center;font-size:22px;font-weight:700;border:2px solid var(--line);border-radius:10px;padding:8px}
+.qty .pm{width:48px;height:48px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:24px;font-weight:700}
+.row{display:flex;gap:8px;align-items:center}
+.row > *{flex:1}
+.manual{display:flex;gap:8px;margin-top:10px}
+.manual input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;direction:ltr;text-align:left}
+.msg{border-radius:12px;padding:10px 12px;margin-bottom:10px;font-weight:700;min-height:44px}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}
+.msg.err{background:var(--err-bg);color:var(--err)}
+.msg.info{background:#EEF1F4;color:var(--muted);font-weight:400}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.list li:last-child{border-bottom:none}
+.list .what{flex:1;min-width:0}
+.list .what small{display:block;color:var(--muted)}
+.tag{font-size:12px;border-radius:6px;padding:2px 8px;background:#F1EEE7;white-space:nowrap}
+.tag.put{background:#E3F3E7;color:#1E5A30}.tag.pick{background:#FBE9D4;color:#7A3E00}.tag.count{background:#E4ECF7;color:#1E3F70}.tag.move{background:#EFE4F7;color:#4E2A70}
+.sent{font-size:12px;color:var(--ok)}
+.del{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px;font-size:13px}
+.del.confirm{background:var(--err-bg);color:var(--err);border-color:#F2B8C0}
+.filters{display:flex;gap:6px;margin-bottom:8px}
+.filters button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:14px}
+.filters button[aria-pressed=true]{background:var(--dark);color:#fff;border-color:var(--dark)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:24px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.help{color:var(--muted);font-size:14px;line-height:1.8}
+label{display:block;font-weight:700;margin:8px 0 4px}
+.field{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card)}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:5;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);padding-bottom:env(safe-area-inset-bottom)}
+nav button{background:none;border:none;padding:12px 4px;font-weight:700;color:var(--muted);font-size:15px}
+nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--accent)}
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(31,42,51,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.overlay .card{width:100%;max-width:420px}
+.qty input[readonly]{background:#FFF4CC;border-color:var(--accent)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>اسکنر انبار</h1>
+  <button class="chip badge" id="unsentChip" title="ارسال‌نشده‌ها">0</button>
+  <button class="chip" id="userChip">—</button>
+  <button class="chip" id="installBtn" hidden>نصب</button>
+</header>
+
+<main>
+  <!-- setup -->
+  <section id="vSetup" hidden>
+    <div class="card stack">
+      <div class="step" id="setupTitle">شروع کار</div>
+      <p class="help">این صفحه را مدیر انبار پر می‌کند. نام کارمند روی هر ثبت می‌نشیند و بعداً فقط با رمز مدیر عوض می‌شود.</p>
+      <label for="inName">نام و نام خانوادگی کارمند</label>
+      <input id="inName" class="field" autocomplete="off">
+      <label for="inDevice">کد گوشی</label>
+      <input id="inDevice" class="field" dir="ltr">
+      <label for="inPin" id="pinLbl">رمز مدیر (۴ تا ۸ رقم)</label>
+      <input id="inPin" class="field" type="password" inputmode="numeric" autocomplete="new-password" dir="ltr">
+      <label for="inPin2">تکرار رمز</label>
+      <input id="inPin2" class="field" type="password" inputmode="numeric" autocomplete="new-password" dir="ltr">
+      <p class="help" id="pinHint" hidden>اگر نمی‌خواهید رمز عوض شود، این دو خانه را خالی بگذارید.</p>
+      <div class="msg err" id="setupErr" hidden></div>
+      <button class="btn accent" id="saveSetup">ذخیره و شروع</button>
+      <button class="btn ghost" id="cancelSetup" hidden>انصراف</button>
+    </div>
+  </section>
+
+  <!-- scan -->
+  <section id="vScan" hidden>
+    <div class="modes" role="group" aria-label="نوع کار">
+      <button data-mode="put">چیدن</button>
+      <button data-mode="pick">برداشت</button>
+      <button data-mode="count">شمارش</button>
+      <button data-mode="move">جابه‌جایی</button>
+    </div>
+
+    <div class="cam">
+      <video id="video" playsinline muted></video>
+      <div class="guide" id="guide" hidden></div>
+      <div class="off" id="camOff">
+        <div id="camMsg">برای اسکن، دوربین را روشن کنید.</div>
+        <button class="btn accent" id="camStart">روشن کردن دوربین</button>
+      </div>
+      <div class="tools" id="camTools" hidden>
+        <button id="torchBtn" hidden>چراغ</button>
+        <button id="camStop">خاموش</button>
+      </div>
+    </div>
+
+    <div class="msg info" id="msg">گوشی را حدود ۸ تا ۱۰ سانت جلوی برچسب نگه دارید.</div>
+
+    <div class="card">
+      <div class="step" id="stepText">بارکد مکان را اسکن کنید</div>
+      <div class="state">
+        <div class="pill" id="pLoc"><b id="pLocLbl">مکان</b><span id="pLocVal">—</span></div>
+        <div class="pill" id="pPart"><b>قطعه</b><span id="pPartVal">—</span></div>
+        <div class="pill" id="pTo" hidden><b>مقصد</b><span id="pToVal">—</span></div>
+      </div>
+      <div class="qty" id="qtyBox" hidden>
+        <button class="pm" id="qMinus" aria-label="کم کردن">−</button>
+        <input id="qty" type="number" inputmode="numeric" min="1" step="1" value="1" aria-label="تعداد">
+        <button class="pm" id="qPlus" aria-label="اضافه کردن">+</button>
+        <button class="btn accent" id="saveBtn" style="flex:1">ذخیره</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="cancelPart" hidden>لغو قطعه</button>
+        <button class="btn ghost" id="newLoc">مکان جدید</button>
+      </div>
+      <form class="manual" id="manualForm" autocomplete="off">
+        <input id="manual" placeholder="یا کد را تایپ کنید" enterkeyhint="done" aria-label="ورود دستی کد">
+        <button class="btn" type="submit">ثبت</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="step" style="font-size:16px">آخرین ثبت‌ها</div>
+      <ul class="list" id="recent"></ul>
+    </div>
+  </section>
+
+  <!-- list -->
+  <section id="vList" hidden>
+    <div class="filters" role="group" aria-label="فیلتر">
+      <button data-f="today" aria-pressed="true">امروز</button>
+      <button data-f="unsent">ارسال‌نشده</button>
+      <button data-f="all">همه</button>
+    </div>
+    <div class="card"><ul class="list" id="allList"></ul></div>
+  </section>
+
+  <!-- send -->
+  <section id="vSend" hidden>
+    <div class="stats">
+      <div class="stat"><b id="sTotal">0</b>همه</div>
+      <div class="stat"><b id="sUnsent">0</b>ارسال‌نشده</div>
+      <div class="stat"><b id="sToday">0</b>امروز</div>
+    </div>
+    <div class="card stack">
+      <button class="btn accent" id="shareUnsent">ارسال ارسال‌نشده‌ها به کامپیوتر</button>
+      <button class="btn ghost" id="shareAll">ارسال همه</button>
+      <button class="btn ghost" id="downloadAll">ذخیره فایل روی گوشی</button>
+      <p class="help">یک فایل Excel (CSV) ساخته می‌شود. در صفحه اشتراک گوشی، بله، تلگرام، ایمیل یا Quick Share را بزنید و برای کامپیوتر انبار بفرستید. فایل در Excel با فارسی درست باز می‌شود.</p>
+    </div>
+    <div class="card stack">
+      <button class="btn danger" id="clearSent">پاک کردن ثبت‌های ارسال‌شده</button>
+      <p class="help">ثبت‌ها تا وقتی پاکشان نکنید روی همین گوشی می‌مانند، حتی بدون اینترنت. فقط بعد از اینکه فایل روی کامپیوتر رسید، پاک کنید.</p>
+    </div>
+    <div class="card help" id="aboutBox"></div>
+  </section>
+</main>
+
+<div class="overlay" id="pinOverlay" hidden>
+  <div class="card stack" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <div class="step" id="pinTitle">رمز مدیر</div>
+    <p class="help" id="pinReason"></p>
+    <input id="pinIn" class="field" type="password" inputmode="numeric" autocomplete="off" dir="ltr" aria-label="رمز مدیر">
+    <div class="msg err" id="pinErr" hidden></div>
+    <div class="row"><button class="btn ghost" id="pinCancel">انصراف</button><button class="btn accent" id="pinOk">تأیید</button></div>
+  </div>
+</div>
+
+<nav>
+  <button data-view="vScan">اسکن</button>
+  <button data-view="vList">فهرست</button>
+  <button data-view="vSend">ارسال</button>
+</nav>
+
+<script src="locations.js"></script>
+<script src="zxing-reader.js"></script>
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1";
+const MODE_FA = {put:"چیدن", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
+const LOCS = new Set(WS_DATA.locations);
+const WANT_NATIVE = ["code_128","code_39","ean_13","ean_8","upc_a","qr_code","data_matrix","itf"];
+const WANT_WASM = ["Code128","Code39","EAN13","EAN8","UPCA","QRCode","DataMatrix","ITF"];
+
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function code(s){ return '<bdi class="code">' + esc(s) + '</bdi>'; }
+function rid(){ return Math.random().toString(36).slice(2,6).toUpperCase(); }
+
+let settings = load(K_SET, null) || {user:"", device: rid()};
+let records = load(K_REC, []);
+let st = {mode:"put", step:"loc", loc:null, part:null, qty:1, toLoc:null};
+
+// ---------- codes ----------
+function norm(s){
+  return String(s || "")
+    .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+    .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[‐-―−]/g, "-")
+    .replace(/[\s‌-‏]+/g, "")
+    .toUpperCase();
+}
+function classify(c){
+  const m = c.match(/^(\d{2})-(\d)-([A-E])(?:-(\d{2}))?$/);
+  if (m) return LOCS.has(m[1] + "-" + m[2] + "-" + m[3]) ? {kind:"loc", code:c} : {kind:"badloc", code:c};
+  if (/^(HLD|RCV|RTN|VAL)-\d{2}$/.test(c)) return LOCS.has(c) ? {kind:"loc", code:c} : {kind:"badloc", code:c};
+  if (/^S\d{1,2}-[A-E]$/.test(c)) return {kind:"loc", code:c};
+  return {kind:"part", code:c};
+}
+function locCompany(c){ const m = /^(\d{2})-/.exec(c || ""); return m ? (WS_DATA.rowOwner[m[1]] || null) : null; }
+function locLabel(c){
+  const co = locCompany(c);
+  if (co) return WS_DATA.companies[co] || co;
+  if (/^S\d/.test(c)) return "رک سپر";
+  return "منطقه مشترک";
+}
+
+// ---------- dates ----------
+let jFmt = null;
+try { jFmt = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {timeZone:"Asia/Tehran", year:"numeric", month:"2-digit", day:"2-digit"}); } catch(e) {}
+const tFmt = new Intl.DateTimeFormat("en-GB", {timeZone:"Asia/Tehran", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false});
+function jDate(d){
+  if (!jFmt) return d.toISOString().slice(0,10);
+  const p = {}; jFmt.formatToParts(d).forEach(x => p[x.type] = x.value);
+  return p.year + "/" + p.month + "/" + p.day;
+}
+function jTime(d){ return tFmt.format(d); }
+function isToday(iso){ return jDate(new Date(iso)) === jDate(new Date()); }
+
+// ---------- feedback ----------
+let audio = null;
+function beep(ok){
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = ok ? 1250 : 260; g.gain.value = 0.15;
+    o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + (ok ? 0.08 : 0.28));
+  } catch(e) {}
+  try { navigator.vibrate && navigator.vibrate(ok ? 60 : [80,60,80]); } catch(e) {}
+}
+function say(html, kind){ const m = $("#msg"); m.className = "msg " + (kind || "info"); m.innerHTML = html; }
+function ok(html){ say(html, "ok"); beep(true); }
+function fail(html){ say(html, "err"); beep(false); }
+
+// ---------- flow ----------
+function onScan(raw, src){
+  const c0 = norm(raw);
+  if (!c0) return;
+  const c = classify(c0);
+  if (c.kind === "badloc") { fail("کد " + code(c0) + " شبیه آدرس است، ولی در فهرست مکان‌های انبار نیست."); return; }
+  if (st.mode === "move") { moveFlow(c); render(); return; }
+  if (c.kind === "loc") {
+    if (st.step === "qty" && !commit()) return;
+    const changed = st.loc && st.loc !== c.code;
+    st.loc = c.code; st.step = "part";
+    ok((changed ? "مکان عوض شد: " : "مکان ") + code(c.code) + " | " + esc(locLabel(c.code)));
+    render(); return;
+  }
+  if (!st.loc) { fail("این بارکد قطعه است. اول بارکد مکان را اسکن کنید."); return; }
+  if (st.step === "qty") {
+    if (c.code === st.part) { setQty(st.qty + 1); ok(code(c.code) + " | تعداد " + st.qty); render(); return; }
+    if (!commit()) return;
+  }
+  st.part = c.code; st.step = "qty"; setQty(1);
+  ok("قطعه " + code(c.code));
+  render();
+}
+function moveFlow(c){
+  if (st.step === "loc") {
+    if (c.kind !== "loc") { fail("اول بارکد مکان مبدأ را اسکن کنید."); return; }
+    st.loc = c.code; st.step = "part"; ok("مبدأ " + code(c.code)); return;
+  }
+  if (st.step === "part") {
+    if (c.kind === "loc") { st.loc = c.code; ok("مبدأ عوض شد: " + code(c.code)); return; }
+    st.part = c.code; st.step = "qty"; setQty(1); ok("قطعه " + code(c.code) + ". حالا بارکد مکان مقصد را اسکن کنید."); return;
+  }
+  // step qty: waiting for destination
+  if (c.kind === "part") {
+    if (c.code === st.part) { setQty(st.qty + 1); ok(code(c.code) + " | تعداد " + st.qty); return; }
+    fail("برای قطعه " + code(st.part) + " اول بارکد مکان مقصد را اسکن کنید، یا «لغو قطعه» را بزنید."); return;
+  }
+  if (c.code === st.loc) { fail("مقصد با مبدأ یکی است."); return; }
+  st.toLoc = c.code;
+  const a = locCompany(st.loc), b = locCompany(st.toLoc);
+  const cross = a && b && a !== b;
+  const saved = commit(cross ? "بین دو شرکت" : "");
+  if (saved) {
+    if (cross) { say("ذخیره شد. این جابه‌جایی بین دو شرکت است؛ سند انتقال لازم است.", "err"); beep(false); }
+    else ok("جابه‌جایی ذخیره شد: " + code(saved.loc) + " ← " + code(saved.toLoc));
+  }
+}
+function setQty(n){ st.qty = Math.max(1, Math.floor(n) || 1); $("#qty").value = st.qty; }
+function commit(note){
+  if (st.step !== "qty" || !st.part) return null;
+  const q = Math.floor(Number($("#qty").value));
+  if (!(q > 0)) { fail("تعداد را درست وارد کنید."); return null; }
+  if (st.mode === "move" && !st.toLoc) { fail("اول بارکد مکان مقصد را اسکن کنید."); return null; }
+  const rec = {id: settings.device + "-" + Date.now().toString(36) + rid(), ts: new Date().toISOString(),
+    user: settings.user, device: settings.device, mode: st.mode, loc: st.loc, toLoc: st.toLoc || "",
+    part: st.part, qty: q, note: note || "", sent: false};
+  records.push(rec);
+  if (!store(K_REC, records)) { records.pop(); fail("حافظه گوشی پر است؛ اول ثبت‌ها را بفرستید و پاک کنید."); return null; }
+  st.part = null; st.toLoc = null; st.step = st.loc ? "part" : "loc"; setQty(1);
+  if (st.mode !== "move") ok("ذخیره شد: " + code(rec.part) + " × " + rec.qty + " در " + code(rec.loc));
+  render();
+  return rec;
+}
+function setMode(m){
+  if (m === st.mode) return;
+  if (st.step === "qty" && st.mode !== "move" && !commit()) return;
+  st.mode = m; st.part = null; st.toLoc = null; setQty(1);
+  if (m === "move") st.loc = null;
+  st.step = st.loc ? "part" : "loc";
+  say("حالت " + esc(MODE_FA[m]) + ".", "info");
+  render();
+}
+
+// ---------- render ----------
+function stepText(){
+  const mv = st.mode === "move";
+  if (st.step === "loc") return mv ? "بارکد مکان مبدأ را اسکن کنید" : "بارکد مکان را اسکن کنید";
+  if (st.step === "part") return "بارکد قطعه را اسکن کنید";
+  if (mv) return "تعداد را بزنید، بعد بارکد مکان مقصد را اسکن کنید";
+  if (st.mode === "count") return "هر بوق یعنی یک عدد. بین دو عدد، گوشی را کمی از بارکد دور کنید. آخر کار «ذخیره»";
+  return "تعداد را بزنید و «ذخیره»، یا قطعه بعدی را اسکن کنید";
+}
+function recItem(r, withDel){
+  const d = new Date(r.ts);
+  const where = code(r.loc) + (r.toLoc ? " ← " + code(r.toLoc) : "");
+  return '<li><span class="tag ' + r.mode + '">' + esc(MODE_FA[r.mode]) + '</span>' +
+    '<div class="what">' + code(r.part) + " × " + r.qty + "<small>" + where + " | " + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
+    (r.sent ? ' | <span class="sent">ارسال‌شده</span>' : "") + (r.note ? " | " + esc(r.note) : "") + "</small></div>" +
+    (withDel ? '<button class="del" data-del="' + esc(r.id) + '">حذف</button>' : "") + "</li>";
+}
+let listFilter = "today";
+function render(){
+  $("#userChip").textContent = settings.user || "نام";
+  const unsent = records.filter(r => !r.sent).length;
+  $("#unsentChip").textContent = unsent;
+  $$(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === st.mode));
+  $("#stepText").textContent = stepText();
+  $("#pLocLbl").textContent = st.mode === "move" ? "مبدأ" : "مکان";
+  $("#pLocVal").innerHTML = st.loc ? code(st.loc) + " " + esc(locLabel(st.loc)) : "—";
+  $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + st.qty : "—";
+  $("#pLoc").classList.toggle("on", st.step === "loc");
+  $("#pPart").classList.toggle("on", st.step === "part");
+  $("#pTo").hidden = st.mode !== "move";
+  $("#pTo").classList.toggle("on", st.mode === "move" && st.step === "qty");
+  $("#pToVal").innerHTML = st.toLoc ? code(st.toLoc) : "—";
+  $("#qtyBox").hidden = st.step !== "qty";
+  $("#saveBtn").hidden = st.mode === "move";
+  $("#qty").readOnly = st.mode === "count";
+  $("#qPlus").hidden = st.mode === "count";
+  $("#cancelPart").hidden = st.step !== "qty";
+  $("#recent").innerHTML = records.slice(-5).reverse().map(r => recItem(r, false)).join("") || '<li class="help">هنوز ثبتی نیست.</li>';
+  const list = records.filter(r => listFilter === "all" || (listFilter === "unsent" ? !r.sent : isToday(r.ts)));
+  $("#allList").innerHTML = list.slice().reverse().map(r => recItem(r, true)).join("") || '<li class="help">چیزی برای نمایش نیست.</li>';
+  $("#sTotal").textContent = records.length;
+  $("#sUnsent").textContent = unsent;
+  $("#sToday").textContent = records.filter(r => isToday(r.ts)).length;
+  const sentN = records.filter(r => r.sent).length;
+  $("#clearSent").textContent = "پاک کردن ثبت‌های ارسال‌شده (" + sentN + ")";
+  $("#clearSent").disabled = sentN === 0;
+  $("#shareUnsent").disabled = unsent === 0;
+  $("#shareAll").disabled = records.length === 0;
+  $("#downloadAll").disabled = records.length === 0;
+}
+function show(view){
+  $$("main > section").forEach(s => s.hidden = s.id !== view);
+  $$("nav button").forEach(b => { if (b.dataset.view === view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+  $("nav").hidden = view === "vSetup";
+  if (view !== "vScan") stopCam();
+}
+
+// ---------- camera ----------
+let stream = null, track = null, detector = null, wasmReady = null, scanning = false, busy = false, torchOn = false, wakeLock = null;
+const video = $("#video");
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d", {willReadFrequently:true});
+async function initDecoder(){
+  if (detector || wasmReady) return;
+  try {
+    if ("BarcodeDetector" in window) {
+      const fm = await BarcodeDetector.getSupportedFormats();
+      if (fm.includes("code_128")) { detector = new BarcodeDetector({formats: WANT_NATIVE.filter(f => fm.includes(f))}); return; }
+    }
+  } catch(e) {}
+  wasmReady = ZXingWASM.prepareZXingModule({
+    overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", location.href).href : prefix + path },
+    fireImmediately: true
+  });
+  await wasmReady;
+}
+// One count per appearance: a code counts again only after it has been out of view
+// for GAP_FRAMES processed frames, and never sooner than MIN_GAP_MS after its last count.
+const GAP_FRAMES = 3, MIN_GAP_MS = 1000;
+let active = {code:null, miss:GAP_FRAMES}, lastCount = {code:"", t:0};
+function onFrame(text){
+  if (!text) { active.miss++; return; }
+  const c = norm(text);
+  if (!c) return;
+  if (c === active.code) {
+    const back = active.miss >= GAP_FRAMES;
+    active.miss = 0;
+    if (!back) return;
+  } else {
+    active = {code:c, miss:0};
+  }
+  const now = Date.now();
+  if (c === lastCount.code && now - lastCount.t < MIN_GAP_MS) return;
+  lastCount = {code:c, t:now};
+  onScan(c, "camera");
+}
+async function startCam(){
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    $("#camMsg").textContent = "دوربین فقط وقتی برنامه از آدرس https باز شده باشد کار می‌کند. فعلاً کد را دستی بزنید.";
+    return;
+  }
+  $("#camMsg").textContent = "در حال روشن شدن دوربین…";
+  // sound has to be unlocked by the tap that starts the camera
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch(e) {}
+  try {
+    await initDecoder();
+    stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}});
+  } catch(e) {
+    $("#camMsg").textContent = e && e.name === "NotAllowedError" ? "اجازه دوربین داده نشد. از تنظیمات مرورگر، دوربین را برای این برنامه مجاز کنید." : "دوربین روشن نشد. کد را دستی بزنید.";
+    return;
+  }
+  video.srcObject = stream;
+  try { await video.play(); } catch(e) {}
+  track = stream.getVideoTracks()[0];
+  const caps = (track.getCapabilities && track.getCapabilities()) || {};
+  $("#torchBtn").hidden = !caps.torch;
+  if (caps.focusMode && caps.focusMode.includes("continuous")) track.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(() => {});
+  $("#camOff").hidden = true; $("#guide").hidden = false; $("#camTools").hidden = false;
+  try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch(e) {}
+  scanning = true; loop();
+}
+function stopCam(){
+  scanning = false; torchOn = false; active = {code:null, miss:GAP_FRAMES};
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; track = null; video.srcObject = null;
+  $("#camOff").hidden = false; $("#guide").hidden = true; $("#camTools").hidden = true;
+  $("#camMsg").textContent = "برای اسکن، دوربین را روشن کنید.";
+  try { wakeLock && wakeLock.release(); } catch(e) {} wakeLock = null;
+}
+async function scanFrame(){
+  if (detector) {
+    const r = await detector.detect(video);
+    if (!r.length) return null;
+    // several codes in view: take the one nearest the centre of the frame
+    const cx = video.videoWidth / 2, cy = video.videoHeight / 2;
+    const dist = b => { const x = b.boundingBox.x + b.boundingBox.width / 2, y = b.boundingBox.y + b.boundingBox.height / 2; return (x - cx) ** 2 + (y - cy) ** 2; };
+    return r.slice().sort((a, b) => dist(a) - dist(b))[0].rawValue;
+  }
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return null;
+  const cw = Math.round(vw * 0.9), ch = Math.round(vh * 0.5);
+  canvas.width = cw; canvas.height = ch;
+  ctx.drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, cw, ch);
+  const res = await ZXingWASM.readBarcodes(ctx.getImageData(0, 0, cw, ch), {formats: WANT_WASM, tryHarder: true, maxNumberOfSymbols: 1});
+  return res.length && res[0].isValid ? res[0].text : null;
+}
+async function loop(){
+  if (!scanning) return;
+  if (video.readyState >= 2 && !busy) {
+    busy = true;
+    try { onFrame(await scanFrame()); } catch(e) {}
+    busy = false;
+  }
+  setTimeout(loop, detector ? 80 : 140);
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopCam(); });
+
+// ---------- export ----------
+function csvOf(rows){
+  const head = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت"];
+  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const lines = [head.map(q).join(",")];
+  rows.forEach(r => { const d = new Date(r.ts); lines.push([r.id, jDate(d), jTime(d), r.ts, r.user, r.device, MODE_FA[r.mode], r.loc, r.toLoc, r.part, r.qty, r.note].map(q).join(",")); });
+  return "﻿" + lines.join("\r\n") + "\r\n";
+}
+function fileName(){
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return "scans_" + settings.device + "_" + jDate(d).replace(/\//g, "") + "_" + p(d.getHours()) + p(d.getMinutes()) + ".csv";
+}
+function markSent(rows){ const ids = new Set(rows.map(r => r.id)); records.forEach(r => { if (ids.has(r.id)) r.sent = true; }); store(K_REC, records); render(); }
+function download(blob, name){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+async function sendRows(rows, forceDownload){
+  if (!rows.length) return;
+  const name = fileName();
+  const blob = new Blob([csvOf(rows)], {type:"text/csv;charset=utf-8"});
+  const file = new File([blob], name, {type:"text/csv"});
+  if (!forceDownload && navigator.canShare && navigator.canShare({files:[file]})) {
+    try { await navigator.share({files:[file], title:name}); markSent(rows); say(rows.length + " ثبت ارسال شد.", "ok"); }
+    catch(e) { if (e && e.name !== "AbortError") { download(blob, name); markSent(rows); say("اشتراک کار نکرد؛ فایل روی گوشی ذخیره شد: " + esc(name), "info"); } }
+    return;
+  }
+  download(blob, name); markSent(rows);
+  say("فایل ذخیره شد: " + esc(name) + ". از پوشه Download گوشی برای کامپیوتر بفرستید.", "ok");
+}
+
+// ---------- two-tap confirm ----------
+function twoTap(btn, label, action){
+  if (btn.dataset.armed === "1") { btn.dataset.armed = ""; action(); return; }
+  const old = btn.textContent; btn.dataset.armed = "1"; btn.textContent = label; btn.classList.add("confirm");
+  setTimeout(() => { if (btn.dataset.armed === "1") { btn.dataset.armed = ""; btn.textContent = old; btn.classList.remove("confirm"); } }, 3000);
+}
+
+// ---------- events ----------
+$$(".modes button").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+$$("nav button").forEach(b => b.addEventListener("click", () => { show(b.dataset.view); render(); }));
+$$(".filters button").forEach(b => b.addEventListener("click", () => { listFilter = b.dataset.f; $$(".filters button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(); }));
+$("#camStart").addEventListener("click", startCam);
+$("#camStop").addEventListener("click", stopCam);
+$("#torchBtn").addEventListener("click", () => { if (!track) return; torchOn = !torchOn; track.applyConstraints({advanced:[{torch: torchOn}]}).catch(() => {}); });
+$("#manualForm").addEventListener("submit", e => { e.preventDefault(); const v = $("#manual").value; $("#manual").value = ""; onScan(v, "manual"); });
+$("#qMinus").addEventListener("click", () => { setQty(st.qty - 1); render(); });
+$("#qPlus").addEventListener("click", () => { setQty(st.qty + 1); render(); });
+$("#qty").addEventListener("input", () => { const n = Math.floor(Number($("#qty").value)); if (n > 0) { st.qty = n; $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + n : "—"; } });
+$("#saveBtn").addEventListener("click", () => commit());
+$("#cancelPart").addEventListener("click", () => { st.part = null; st.toLoc = null; st.step = st.loc ? "part" : "loc"; setQty(1); say("قطعه لغو شد.", "info"); render(); });
+$("#newLoc").addEventListener("click", () => { if (st.step === "qty" && st.mode !== "move" && !commit()) return; st.loc = null; st.part = null; st.toLoc = null; st.step = "loc"; say("مکان جدید را اسکن کنید.", "info"); render(); });
+$("#allList").addEventListener("click", async e => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  const id = b.dataset.del;
+  if (!(await askPin("برای حذف یک ثبت، رمز مدیر لازم است."))) return;
+  records = records.filter(r => r.id !== id); store(K_REC, records); render(); say("ثبت حذف شد.", "info");
+});
+$("#shareUnsent").addEventListener("click", () => sendRows(records.filter(r => !r.sent), false));
+$("#shareAll").addEventListener("click", () => sendRows(records.slice(), false));
+$("#downloadAll").addEventListener("click", () => sendRows(records.slice(), true));
+$("#clearSent").addEventListener("click", e => twoTap(e.currentTarget, "مطمئنید؟ دوباره بزنید", () => { records = records.filter(r => !r.sent); store(K_REC, records); render(); say("ثبت‌های ارسال‌شده پاک شدند.", "info"); }));
+$("#unsentChip").addEventListener("click", () => { show("vSend"); render(); });
+// ---------- manager PIN ----------
+async function hashPin(pin, salt){
+  const data = new TextEncoder().encode(salt + ":" + pin);
+  if (window.crypto && crypto.subtle) {
+    const h = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  let h = 2166136261;
+  for (let i = 0; i < 4000; i++) for (const b of data) { h ^= b; h = Math.imul(h, 16777619) >>> 0; }
+  return "f" + h.toString(16);
+}
+function pinDigits(s){ return norm(s).replace(/[^0-9]/g, ""); }
+let pinFails = 0, pinLockUntil = 0, pinResolve = null;
+function askPin(reason){
+  return new Promise(res => {
+    if (!settings.pin) { res(true); return; }
+    pinResolve = res;
+    $("#pinReason").textContent = reason; $("#pinIn").value = ""; $("#pinErr").hidden = true;
+    $("#pinOverlay").hidden = false; setTimeout(() => $("#pinIn").focus(), 50);
+  });
+}
+function closePin(ok){ $("#pinOverlay").hidden = true; const r = pinResolve; pinResolve = null; if (r) r(ok); }
+function showPinErr(t){ const e = $("#pinErr"); e.textContent = t; e.hidden = false; }
+async function checkPin(){
+  const now = Date.now();
+  if (now < pinLockUntil) { showPinErr("چند بار رمز اشتباه زده شد. " + Math.ceil((pinLockUntil - now) / 1000) + " ثانیه صبر کنید."); return; }
+  const h = await hashPin(pinDigits($("#pinIn").value), settings.pin.salt);
+  if (h === settings.pin.hash) { pinFails = 0; closePin(true); return; }
+  pinFails++; $("#pinIn").value = ""; beep(false);
+  if (pinFails >= 5) { pinFails = 0; pinLockUntil = Date.now() + 60000; showPinErr("رمز ۵ بار اشتباه بود. ۶۰ ثانیه صبر کنید."); }
+  else showPinErr("رمز اشتباه است.");
+}
+$("#pinOk").addEventListener("click", checkPin);
+$("#pinIn").addEventListener("keydown", e => { if (e.key === "Enter") checkPin(); });
+$("#pinCancel").addEventListener("click", () => closePin(false));
+
+function openSetup(edit){
+  $("#inName").value = edit ? settings.user : "";
+  $("#inDevice").value = settings.device;
+  $("#inPin").value = ""; $("#inPin2").value = "";
+  const hasPin = !!settings.pin;
+  $("#setupTitle").textContent = edit ? "تغییر نام یا کد گوشی" : "شروع کار";
+  $("#pinLbl").textContent = hasPin ? "رمز جدید مدیر (اختیاری)" : "رمز مدیر (۴ تا ۸ رقم)";
+  $("#pinHint").hidden = !hasPin;
+  $("#cancelSetup").hidden = !(edit && hasPin);
+  $("#setupErr").hidden = true;
+  show("vSetup");
+}
+$("#userChip").addEventListener("click", async () => { if (await askPin("برای تغییر نام یا کد گوشی، رمز مدیر لازم است.")) openSetup(true); });
+$("#cancelSetup").addEventListener("click", () => { show("vScan"); render(); });
+$("#saveSetup").addEventListener("click", async () => {
+  const err = t => { const e = $("#setupErr"); e.textContent = t; e.hidden = false; beep(false); };
+  const n = $("#inName").value.trim();
+  const dv = norm($("#inDevice").value).replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  const p1 = pinDigits($("#inPin").value), p2 = pinDigits($("#inPin2").value);
+  if (!n) { err("نام کارمند را بنویسید."); return; }
+  if (!dv) { err("کد گوشی را بنویسید، مثلاً A1."); return; }
+  let pin = settings.pin || null;
+  if (!pin || p1 || p2) {
+    if (p1.length < 4 || p1.length > 8) { err("رمز مدیر باید ۴ تا ۸ رقم باشد."); return; }
+    if (p1 !== p2) { err("رمز و تکرارش یکی نیستند."); return; }
+    const salt = rid() + rid() + rid();
+    pin = {salt, hash: await hashPin(p1, salt)};
+  }
+  settings = {user: n, device: dv, pin}; store(K_SET, settings);
+  show("vScan"); render(); say("ذخیره شد. کارمند: " + esc(n) + "، گوشی " + code(dv), "ok");
+});
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; $("#installBtn").hidden = false; });
+$("#installBtn").addEventListener("click", async () => { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch(e) {} deferredInstall = null; $("#installBtn").hidden = true; });
+
+$("#aboutBox").innerHTML = "فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
+if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
+window.__wsc = {onScan, state: () => st, records: () => records};
+if (!settings.user || !settings.pin) openSetup(false); else show("vScan");
+render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>گزارش اسکن‌ها</title>
+<link rel="icon" href="icon-192.png">
+<style>
+@font-face{font-family:Vazirmatn;src:url(Vazirmatn-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Vazirmatn;src:url(Vazirmatn-Bold.woff2) format("woff2");font-weight:700;font-display:swap}
+:root{--bg:#F6F4EF;--card:#FFFFFF;--ink:#1F2A33;--muted:#5A6570;--line:#E2DED5;--accent:#F2B705;--ok:#1E7B3A;--ok-bg:#E3F3E7;--err:#B00D26;--err-bg:#FBE4E7;--dark:#1F2A33}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif;font-size:15px}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+bdi.code{font-weight:700;direction:ltr;unicode-bidi:isolate}
+header{background:var(--dark);color:#F6F4EF;padding:14px 20px;border-bottom:4px solid var(--accent);display:flex;align-items:center;gap:12px}
+header h1{font-size:20px;margin:0;flex:1}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.drop{display:block;cursor:pointer;border:2px dashed #C9C3B6;border-radius:14px;padding:28px;text-align:center;background:#FBFAF6}
+.drop.over{border-color:var(--accent);background:#FFF8DD}
+.drop b{display:block;font-size:18px;margin-bottom:6px}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-weight:700;background:var(--dark);color:#F6F4EF;cursor:pointer}
+.btn.accent{background:var(--accent);color:var(--dark)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:22px}
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end}
+.filters label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.filters input,.filters select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--card)}
+.msg{border-radius:10px;padding:10px 12px;margin-bottom:14px;font-weight:700}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}
+.msg.err{background:var(--err-bg);color:var(--err)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
+.tablewrap{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.summary{display:flex;flex-wrap:wrap;gap:10px}
+.summary .pill{background:#FFF4CC;border:1px solid var(--accent);border-radius:10px;padding:8px 12px}
+.summary .pill small{display:block;color:var(--muted);font-size:12px}
+.help{color:var(--muted);font-size:14px;line-height:1.8}
+[hidden]{display:none!important}
+@media (max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>گزارش اسکن‌ها: هر قطعه، کی، کجا، توسط چه کسی</h1>
+  <button class="btn accent" id="xlsxBtn" disabled>دانلود Excel</button>
+</header>
+<main>
+  <div class="card">
+    <label class="drop" id="drop">
+      <b>فایل‌های CSV همه گوشی‌ها را اینجا بکشید</b>
+      <span class="help">یا کلیک کنید و چند فایل را با هم انتخاب کنید. فایل تکراری یا ثبت تکراری یک بار حساب می‌شود.</span>
+      <input type="file" id="files" accept=".csv,text/csv" multiple hidden>
+    </label>
+  </div>
+  <div class="msg" id="msg" hidden></div>
+
+  <div class="stats" id="stats" hidden>
+    <div class="stat"><b id="stFiles">0</b>فایل</div>
+    <div class="stat"><b id="stRows">0</b>ثبت</div>
+    <div class="stat"><b id="stDup">0</b>تکراری حذف شد</div>
+    <div class="stat"><b id="stStaff">0</b>کارمند</div>
+    <div class="stat"><b id="stRange">—</b>بازه تاریخ</div>
+  </div>
+
+  <div class="card" id="filterCard" hidden>
+    <div class="filters">
+      <div><label for="fText">کد قطعه یا مکان</label><input id="fText" dir="ltr" placeholder="S11-3502010 یا 16-3-C"></div>
+      <div><label for="fStaff">کارمند</label><select id="fStaff"><option value="">همه</option></select></div>
+      <div><label for="fMode">عملیات</label><select id="fMode"><option value="">همه</option></select></div>
+      <div><label for="fFrom">از تاریخ</label><input id="fFrom" dir="ltr" placeholder="1405/07/01"></div>
+      <div><label for="fTo">تا تاریخ</label><input id="fTo" dir="ltr" placeholder="1405/07/30"></div>
+      <div><button class="btn ghost" id="fClear">پاک کردن فیلتر</button></div>
+    </div>
+  </div>
+
+  <div class="card" id="partCard" hidden>
+    <div class="summary" id="partSummary"></div>
+  </div>
+
+  <div class="card" id="tableCard" hidden>
+    <p class="help" id="shown"></p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>تاریخ</th><th>ساعت</th><th>کارمند</th><th>عملیات</th><th>مکان</th><th>مکان مقصد</th><th>کد قطعه</th><th>تعداد</th><th>گوشی</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card help">
+    این صفحه روی همین کامپیوتر کار می‌کند و فایل‌ها را جایی نمی‌فرستد. فایل Excel چهار برگه دارد: جست‌وجوی قطعه (کد قطعه را در خانه زرد بنویسید)، خلاصه قطعه‌ها، کارمندان و همه ثبت‌ها.
+  </div>
+</main>
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const HEAD = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت"];
+const KEY = ["id","date","time","ts","user","device","mode","loc","toLoc","part","qty","note"];
+let all = new Map(), fileNames = new Set(), dupCount = 0;
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function code(s){ return '<bdi class="code">' + esc(s) + '</bdi>'; }
+function normDigits(s){ return String(s || "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).trim(); }
+function say(t, kind){ const m = $("#msg"); m.hidden = false; m.className = "msg " + kind; m.innerHTML = t; }
+
+// ---------- CSV ----------
+function parseCSV(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else f += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(f); f = ""; }
+    else if (ch === "\n") { row.push(f); rows.push(row); row = []; f = ""; }
+    else if (ch !== "\r") f += ch;
+  }
+  if (f !== "" || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(x => x !== ""));
+}
+function addFile(name, text){
+  const rows = parseCSV(text);
+  if (!rows.length) return {name, ok:false, why:"خالی است"};
+  const idx = HEAD.map(h => rows[0].indexOf(h));
+  if (idx[0] < 0 || idx[9] < 0 || idx[7] < 0) return {name, ok:false, why:"فایل اسکنر انبار نیست"};
+  let added = 0, dup = 0;
+  for (const r of rows.slice(1)) {
+    const o = {};
+    KEY.forEach((k, j) => o[k] = idx[j] >= 0 ? (r[idx[j]] || "") : "");
+    if (!o.id) continue;
+    o.qty = Number(o.qty) || 0;
+    if (all.has(o.id)) { dup++; continue; }
+    all.set(o.id, o); added++;
+  }
+  dupCount += dup; fileNames.add(name);
+  return {name, ok:true, added, dup};
+}
+async function loadFiles(list){
+  const res = [];
+  for (const f of list) res.push(addFile(f.name, await f.text()));
+  const bad = res.filter(r => !r.ok);
+  const added = res.filter(r => r.ok).reduce((a, r) => a + r.added, 0);
+  if (bad.length) say("این فایل‌ها خوانده نشدند: " + bad.map(b => esc(b.name) + " (" + b.why + ")").join("، "), "err");
+  else say(res.length + " فایل خوانده شد؛ " + added + " ثبت تازه اضافه شد.", "ok");
+  refreshOptions(); render();
+}
+
+// ---------- view ----------
+function sorted(){ return Array.from(all.values()).sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0); }
+function filtered(){
+  const t = normDigits($("#fText").value).toUpperCase().replace(/\s+/g, "");
+  const st = $("#fStaff").value, md = $("#fMode").value;
+  const from = normDigits($("#fFrom").value), to = normDigits($("#fTo").value);
+  return sorted().filter(r =>
+    (!t || r.part.toUpperCase().includes(t) || r.loc.toUpperCase().includes(t) || r.toLoc.toUpperCase().includes(t)) &&
+    (!st || r.user === st) && (!md || r.mode === md) &&
+    (!from || r.date >= from) && (!to || r.date <= to));
+}
+function refreshOptions(){
+  const keep = (sel, vals) => { const cur = sel.value; sel.innerHTML = '<option value="">همه</option>' + vals.map(v => '<option>' + esc(v) + "</option>").join(""); sel.value = vals.includes(cur) ? cur : ""; };
+  const recs = Array.from(all.values());
+  keep($("#fStaff"), Array.from(new Set(recs.map(r => r.user))).sort());
+  keep($("#fMode"), Array.from(new Set(recs.map(r => r.mode))).sort());
+}
+function partSummary(rows){
+  const t = normDigits($("#fText").value).toUpperCase().replace(/\s+/g, "");
+  const mine = rows.filter(r => r.part.toUpperCase() === t);
+  if (!t || !mine.length) return "";
+  const last = mine[0];
+  const sum = m => mine.filter(r => r.mode === m).reduce((a, r) => a + r.qty, 0);
+  const lastCount = mine.find(r => r.mode === "شمارش");
+  const pill = (k, v) => '<div class="pill"><small>' + esc(k) + "</small>" + v + "</div>";
+  return pill("قطعه", code(last.part)) + pill("تعداد ثبت", mine.length) + pill("آخرین مکان", code(last.toLoc || last.loc)) +
+    pill("آخرین ثبت", esc(last.date + " " + last.time.slice(0, 5)) + "، " + esc(last.user)) +
+    pill("جمع چیدن", sum("چیدن")) + pill("جمع برداشت", sum("برداشت")) +
+    pill("آخرین شمارش", lastCount ? lastCount.qty + " در " + code(lastCount.loc) + "، " + esc(lastCount.date) : "—");
+}
+function render(){
+  const recs = Array.from(all.values());
+  const any = recs.length > 0;
+  ["#stats", "#filterCard", "#tableCard"].forEach(s => $(s).hidden = !any);
+  $("#xlsxBtn").disabled = !any;
+  if (!any) return;
+  $("#stFiles").textContent = fileNames.size;
+  $("#stRows").textContent = recs.length;
+  $("#stDup").textContent = dupCount;
+  $("#stStaff").textContent = new Set(recs.map(r => r.user)).size;
+  const ds = recs.map(r => r.date).sort();
+  $("#stRange").innerHTML = code(ds[0]) + " تا " + code(ds[ds.length - 1]);
+  const rows = filtered();
+  const ps = partSummary(rows);
+  $("#partCard").hidden = !ps; $("#partSummary").innerHTML = ps;
+  const LIMIT = 1000;
+  $("#shown").textContent = rows.length + " ثبت" + (rows.length > LIMIT ? "؛ " + LIMIT + " ثبت آخر نشان داده شده. همه در فایل Excel هست." : "");
+  $("#rows").innerHTML = rows.slice(0, LIMIT).map(r => "<tr><td>" + code(r.date) + "</td><td>" + code(r.time) + "</td><td>" + esc(r.user) + "</td><td>" + esc(r.mode) +
+    "</td><td>" + code(r.loc) + "</td><td>" + (r.toLoc ? code(r.toLoc) : "") + "</td><td>" + code(r.part) + "</td><td>" + r.qty + "</td><td>" + code(r.device) + "</td></tr>").join("");
+}
+
+// ---------- xlsx ----------
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b){ let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files){
+  const enc = new TextEncoder(), out = [], cen = []; let off = 0;
+  for (const f of files) {
+    const nb = enc.encode(f.name), data = typeof f.data === "string" ? enc.encode(f.data) : f.data, crc = crc32(data), n = data.length;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, crc, true); h.setUint32(18, n, true); h.setUint32(22, n, true); h.setUint16(26, nb.length, true);
+    out.push(new Uint8Array(h.buffer), nb, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(14, 0x21, true);
+    c.setUint32(16, crc, true); c.setUint32(20, n, true); c.setUint32(24, n, true); c.setUint16(28, nb.length, true); c.setUint32(42, off, true);
+    cen.push(new Uint8Array(c.buffer), nb);
+    off += 30 + nb.length + n;
+  }
+  const cs = cen.reduce((a, b) => a + b.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...out, ...cen, new Uint8Array(e.buffer)], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function x(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ""); }
+function col(i){ let s = ""; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function cell(ref, v, s){
+  const st = s ? ' s="' + s + '"' : "";
+  if (v == null || v === "") return s ? '<c r="' + ref + '"' + st + "/>" : "";
+  if (typeof v === "object") return '<c r="' + ref + '"' + st + "><f>" + x(v.f) + "</f></c>";
+  if (typeof v === "number") return '<c r="' + ref + '"' + st + "><v>" + v + "</v></c>";
+  return '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + x(v) + "</t></is></c>";
+}
+// sheet = {name, rows:[[...]], widths:[...], hidden:[colIdx], headerRow: rowIndex (0-based) or -1, freezeRows, filter:true}
+function sheetXml(sh){
+  const rows = sh.rows.map((r, ri) => '<row r="' + (ri + 1) + '">' + r.map((v, ci) => {
+    let s = 0;
+    if (ri === sh.headerRow) s = 1;
+    else if (sh.style) s = sh.style(ri, ci) || 0;
+    return cell(col(ci) + (ri + 1), v, s);
+  }).join("") + "</row>").join("");
+  const cols = "<cols>" + sh.widths.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"' + (sh.hidden && sh.hidden.includes(i) ? ' hidden="1"' : "") + "/>").join("") + "</cols>";
+  const fr = sh.freezeRows ? '<pane ySplit="' + sh.freezeRows + '" topLeftCell="A' + (sh.freezeRows + 1) + '" activePane="bottomLeft" state="frozen"/>' : "";
+  const ncol = Math.max(...sh.rows.map(r => r.length));
+  const af = sh.filter ? '<autoFilter ref="A' + (sh.headerRow + 1) + ":" + col(ncol - 1) + sh.rows.length + '"/>' : "";
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<sheetViews><sheetView rightToLeft="1" workbookViewId="0"' + (sh.active ? ' tabSelected="1"' : "") + ">" + fr + "</sheetView></sheetViews><sheetFormatPr defaultRowHeight=\"18\"/>" + cols + "<sheetData>" + rows + "</sheetData>" + af + "</worksheet>";
+}
+const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+  '<fonts count="3"><font><sz val="11"/><name val="Tahoma"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Tahoma"/></font><font><b/><sz val="12"/><name val="Tahoma"/></font></fonts>' +
+  '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+  '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>' +
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+  '<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+  '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+  '<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>' +
+  '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+  '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/></cellXfs>' +
+  '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+
+function buildXlsx(){
+  const recs = sorted();             // newest first
+  const N = recs.length, last = N + 1;
+  const DATA = "'همه ثبت‌ها'", SRCH = "'جست‌وجوی قطعه'";
+  // 1. all scans, with a helper column counting matches of the searched part
+  const allRows = [HEAD.concat(["شماره تطابق"])].concat(recs.map((r, i) => {
+    const n = i + 2;
+    return [r.id, r.date, r.time, r.ts, r.user, r.device, r.mode, r.loc, r.toLoc, r.part, r.qty, r.note,
+      {f: "IF(" + SRCH + "!$B$2=\"\",\"\",IF(J" + n + "=" + SRCH + "!$B$2,COUNTIF($J$2:J" + n + "," + SRCH + "!$B$2),\"\"))"}];
+  }));
+  // 2. part search: type a code in B2
+  const R0 = 5, MAXR = 200;
+  const srch = [
+    ["کد قطعه را در خانه زرد بنویسید", "", "", "", "", "", "", "", ""],
+    ["کد قطعه", "", "تعداد ثبت", {f: "IF($B$2=\"\",\"\",COUNTIF(" + DATA + "!$J$2:$J$" + last + ",$B$2))"}, "آخرین مکان", {f: "IF($K$5=\"\",\"\",IF(INDEX(" + DATA + "!$I$2:$I$" + last + ",$K$5)<>\"\",INDEX(" + DATA + "!$I$2:$I$" + last + ",$K$5),INDEX(" + DATA + "!$H$2:$H$" + last + ",$K$5)))"}, "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["ردیف", "تاریخ", "ساعت", "کارمند", "عملیات", "مکان", "مکان مقصد", "تعداد", "گوشی", "", "ردیف داده"]
+  ];
+  // text columns get &"" so an empty source cell shows empty, not 0
+  const pick = (c, n) => ({f: "IF($K" + n + "=\"\",\"\",INDEX(" + DATA + "!$" + c + "$2:$" + c + "$" + last + ",$K" + n + ")" + (c === "K" ? "" : "&\"\"") + ")"});
+  for (let k = 0; k < MAXR; k++) {
+    const n = R0 + k;
+    srch.push([
+      {f: "IF($B$2=\"\",\"\",IF(ROWS($A$" + R0 + ":A" + n + ")>COUNTIF(" + DATA + "!$J$2:$J$" + last + ",$B$2),\"\",ROWS($A$" + R0 + ":A" + n + ")))"},
+      pick("B", n), pick("C", n), pick("E", n), pick("G", n), pick("H", n), pick("I", n), pick("K", n), pick("F", n), "",
+      {f: "IF($A" + n + "=\"\",\"\",MATCH($A" + n + "," + DATA + "!$M$2:$M$" + last + ",0))"}
+    ]);
+  }
+  // 3. part summary
+  const byPart = new Map();
+  recs.forEach(r => { if (!byPart.has(r.part)) byPart.set(r.part, []); byPart.get(r.part).push(r); });
+  const parts = [["کد قطعه", "تعداد ثبت", "آخرین مکان", "آخرین عملیات", "آخرین تاریخ", "آخرین ساعت", "آخرین کارمند", "جمع چیدن", "جمع برداشت", "آخرین شمارش", "مکان آخرین شمارش"]];
+  Array.from(byPart.keys()).sort().forEach(p => {
+    const m = byPart.get(p), l = m[0], lc = m.find(r => r.mode === "شمارش");
+    const sum = mode => m.filter(r => r.mode === mode).reduce((a, r) => a + r.qty, 0);
+    parts.push([p, m.length, l.toLoc || l.loc, l.mode, l.date, l.time, l.user, sum("چیدن"), sum("برداشت"), lc ? lc.qty : "", lc ? lc.loc : ""]);
+  });
+  // 4. staff per day
+  const byStaff = new Map();
+  recs.forEach(r => { const k = r.user + "\u0001" + r.date; if (!byStaff.has(k)) byStaff.set(k, {user:r.user, date:r.date, n:0, q:0, dev:new Set()}); const o = byStaff.get(k); o.n++; o.q += r.qty; o.dev.add(r.device); });
+  const staff = [["کارمند", "تاریخ", "تعداد ثبت", "جمع تعداد", "گوشی"]].concat(
+    Array.from(byStaff.values()).sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : a.user.localeCompare(b.user)).map(o => [o.user, o.date, o.n, o.q, Array.from(o.dev).join("، ")]));
+
+  const sheets = [
+    {name:"جست‌وجوی قطعه", rows:srch, widths:[8, 13, 10, 18, 13, 12, 12, 8, 8, 2, 10], hidden:[10], headerRow:3, freezeRows:4, active:true,
+      style:(ri, ci) => ri === 1 && ci === 1 ? 2 : (ri === 0 || (ri === 1 && (ci === 0 || ci === 2 || ci === 4))) ? 3 : (ri >= 4 && ci < 9 ? 4 : 0)},
+    {name:"خلاصه قطعه‌ها", rows:parts, widths:[18, 10, 12, 12, 12, 10, 18, 10, 10, 12, 16], headerRow:0, freezeRows:1, filter:true},
+    {name:"کارمندان", rows:staff, widths:[20, 12, 10, 10, 14], headerRow:0, freezeRows:1, filter:true},
+    {name:"همه ثبت‌ها", rows:allRows, widths:[20, 12, 10, 24, 18, 8, 10, 10, 10, 18, 8, 14, 10], hidden:[12], headerRow:0, freezeRows:1, filter:true}
+  ];
+  const files = [];
+  files.push({name:"[Content_Types].xml", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    sheets.map((s, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join("") +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'});
+  files.push({name:"_rels/.rels", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'});
+  files.push({name:"xl/workbook.xml", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets>' +
+    sheets.map((s, i) => '<sheet name="' + x(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join("") + '</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'});
+  files.push({name:"xl/_rels/workbook.xml.rels", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    sheets.map((s, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join("") +
+    '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'});
+  files.push({name:"xl/styles.xml", data:STYLES});
+  sheets.forEach((s, i) => files.push({name:"xl/worksheets/sheet" + (i + 1) + ".xml", data:sheetXml(s)}));
+  return zip(files);
+}
+function download(blob, name){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+
+// ---------- events ----------
+const drop = $("#drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); loadFiles(Array.from(e.dataTransfer.files)); });
+$("#files").addEventListener("change", e => { loadFiles(Array.from(e.target.files)); e.target.value = ""; });
+["#fText", "#fFrom", "#fTo"].forEach(s => $(s).addEventListener("input", render));
+["#fStaff", "#fMode"].forEach(s => $(s).addEventListener("change", render));
+$("#fClear").addEventListener("click", () => { ["#fText", "#fFrom", "#fTo"].forEach(s => $(s).value = ""); $("#fStaff").value = ""; $("#fMode").value = ""; render(); });
+$("#xlsxBtn").addEventListener("click", () => {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  download(buildXlsx(), "Scan_Report_" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()) + ".xlsx");
+});
+window.__rep = {addFile, all: () => all, render};
+})();
+</script>
+</body>
+</html>
