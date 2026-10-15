@@ -28,9 +28,10 @@ main{padding:12px 12px 0;max-width:640px;margin:0 auto}
 .modes button[aria-pressed=true]{background:var(--dark);color:#F6F4EF;border-color:var(--dark)}
 .cam{position:relative;background:#111;border-radius:14px;overflow:hidden;aspect-ratio:16/10;margin-bottom:10px}
 .cam video{width:100%;height:100%;object-fit:cover;display:block}
-.cam .guide{position:absolute;left:5%;right:5%;top:25%;bottom:25%;border:3px solid var(--accent);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
+.cam .guide{position:absolute;left:3%;right:3%;top:15%;bottom:15%;border:3px solid var(--accent);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28)}
 .cam .off{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#F6F4EF;text-align:center;padding:16px}
 .cam .tools{position:absolute;bottom:8px;left:8px;display:flex;gap:6px}
+.cam .diag{position:absolute;top:6px;right:8px;left:8px;color:#fff;font-size:11px;text-shadow:0 1px 2px #000;direction:ltr;text-align:left;pointer-events:none}
 .cam .tools button{background:rgba(31,42,51,.8);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px;font-size:14px}
 .btn{border:none;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--dark);color:#F6F4EF}
 .btn.accent{background:var(--accent);color:var(--dark)}
@@ -127,6 +128,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
         <div id="camMsg">برای اسکن، دوربین را روشن کنید.</div>
         <button class="btn accent" id="camStart">روشن کردن دوربین</button>
       </div>
+      <div class="diag" id="camDiag" hidden></div>
       <div class="tools" id="camTools" hidden>
         <button id="torchBtn" hidden>چراغ</button>
         <button id="camStop">خاموش</button>
@@ -152,6 +154,8 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
         <button class="btn ghost" id="cancelPart" hidden>لغو قطعه</button>
         <button class="btn ghost" id="newLoc">مکان جدید</button>
       </div>
+      <label class="btn ghost" id="photoBtn" for="photoIn" style="display:block;text-align:center;margin-top:10px">اسکن با عکس (اگر دوربین زنده نخواند)</label>
+      <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
       <form class="manual" id="manualForm" autocomplete="off">
         <input id="manual" placeholder="یا کد را تایپ کنید" enterkeyhint="done" aria-label="ورود دستی کد">
         <button class="btn" type="submit">ثبت</button>
@@ -221,8 +225,6 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1";
 const MODE_FA = {put:"چیدن", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
 const LOCS = new Set(WS_DATA.locations);
-const WANT_NATIVE = ["code_128","code_39","ean_13","ean_8","upc_a","qr_code","data_matrix","itf"];
-const WANT_WASM = ["Code128","Code39","EAN13","EAN8","UPCA","QRCode","DataMatrix","ITF"];
 
 function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
 function store(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
@@ -420,20 +422,27 @@ let stream = null, track = null, detector = null, wasmReady = null, scanning = f
 const video = $("#video");
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d", {willReadFrequently:true});
+// Two readers: the phone's own (BarcodeDetector, needs Google Play services) and the bundled
+// zxing reader. Frames alternate between them; the phone's reader is dropped after repeated errors.
+let wasmOk = false, nativeErrors = 0, frameNo = 0;
+const diag = {frames:0, hits:0, ms:0, err:""};
 async function initDecoder(){
-  if (detector || wasmReady) return;
+  if (!wasmReady) {
+    wasmReady = ZXingWASM.prepareZXingModule({
+      overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", location.href).href : prefix + path },
+      fireImmediately: true
+    }).then(() => { wasmOk = true; }).catch(e => { diag.err = "zxing: " + ((e && e.message) || e); });
+  }
   try {
-    if ("BarcodeDetector" in window) {
+    if (!detector && "BarcodeDetector" in window) {
       const fm = await BarcodeDetector.getSupportedFormats();
-      if (fm.includes("code_128")) { detector = new BarcodeDetector({formats: WANT_NATIVE.filter(f => fm.includes(f))}); return; }
+      if (fm && fm.length) detector = new BarcodeDetector({formats: fm});
     }
-  } catch(e) {}
-  wasmReady = ZXingWASM.prepareZXingModule({
-    overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", location.href).href : prefix + path },
-    fireImmediately: true
-  });
+  } catch(e) { detector = null; diag.err = "native: " + (e && e.name); }
   await wasmReady;
+  if (!wasmOk && !detector) throw new Error("no barcode reader");
 }
+function engineName(){ return (detector ? "phone" : "") + (detector && wasmOk ? "+" : "") + (wasmOk ? "zxing" : ""); }
 // One count per appearance: a code counts again only after it has been out of view
 // for GAP_FRAMES processed frames, and never sooner than MIN_GAP_MS after its last count.
 const GAP_FRAMES = 3, MIN_GAP_MS = 1000;
@@ -466,7 +475,9 @@ async function startCam(){
     await initDecoder();
     stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}});
   } catch(e) {
-    $("#camMsg").textContent = e && e.name === "NotAllowedError" ? "اجازه دوربین داده نشد. از تنظیمات مرورگر، دوربین را برای این برنامه مجاز کنید." : "دوربین روشن نشد. کد را دستی بزنید.";
+    $("#camMsg").textContent = e && e.name === "NotAllowedError" ? "اجازه دوربین داده نشد. از تنظیمات مرورگر، دوربین را برای این برنامه مجاز کنید."
+      : e && e.message === "no barcode reader" ? "بارکدخوان برنامه بار نشد (" + diag.err + "). یک بار با اینترنت برنامه را باز کنید."
+      : "دوربین روشن نشد. «اسکن با عکس» یا تایپ دستی را امتحان کنید.";
     return;
   }
   video.srcObject = stream;
@@ -487,22 +498,62 @@ function stopCam(){
   $("#camMsg").textContent = "برای اسکن، دوربین را روشن کنید.";
   try { wakeLock && wakeLock.release(); } catch(e) {} wakeLock = null;
 }
-async function scanFrame(){
-  if (detector) {
-    const r = await detector.detect(video);
+async function nativeScan(src, w, h){
+  try {
+    const r = await detector.detect(src);
+    nativeErrors = 0;
     if (!r.length) return null;
-    // several codes in view: take the one nearest the centre of the frame
-    const cx = video.videoWidth / 2, cy = video.videoHeight / 2;
-    const dist = b => { const x = b.boundingBox.x + b.boundingBox.width / 2, y = b.boundingBox.y + b.boundingBox.height / 2; return (x - cx) ** 2 + (y - cy) ** 2; };
+    // several codes in view: take the one nearest the centre
+    const dist = b => { const x = b.boundingBox.x + b.boundingBox.width / 2, y = b.boundingBox.y + b.boundingBox.height / 2; return (x - w / 2) ** 2 + (y - h / 2) ** 2; };
     return r.slice().sort((a, b) => dist(a) - dist(b))[0].rawValue;
+  } catch(e) {
+    nativeErrors++; diag.err = "phone reader: " + (e && e.name);
+    if (nativeErrors >= 3) detector = null;
+    return null;
   }
+}
+async function wasmScan(imageData){
+  const res = await ZXingWASM.readBarcodes(imageData, {tryHarder: true, maxNumberOfSymbols: 1});
+  const ok = res.find(r => r.isValid && r.text);
+  return ok ? ok.text : null;
+}
+async function scanFrame(){
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!vw || !vh) return null;
-  const cw = Math.round(vw * 0.9), ch = Math.round(vh * 0.5);
-  canvas.width = cw; canvas.height = ch;
-  ctx.drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, cw, ch);
-  const res = await ZXingWASM.readBarcodes(ctx.getImageData(0, 0, cw, ch), {formats: WANT_WASM, tryHarder: true, maxNumberOfSymbols: 1});
-  return res.length && res[0].isValid ? res[0].text : null;
+  frameNo++;
+  const t0 = performance.now();
+  let text = null;
+  if (detector && (!wasmOk || frameNo % 2 === 0)) text = await nativeScan(video, vw, vh);
+  else if (wasmOk) {
+    const cw = vw, ch = Math.round(vh * 0.7);
+    canvas.width = cw; canvas.height = ch;
+    ctx.drawImage(video, 0, (vh - ch) / 2, cw, ch, 0, 0, cw, ch);
+    text = await wasmScan(ctx.getImageData(0, 0, cw, ch));
+  }
+  diag.frames++; diag.ms = Math.round(performance.now() - t0); if (text) diag.hits++;
+  return text;
+}
+function showDiag(){
+  const d = $("#camDiag");
+  if (!scanning) { d.hidden = true; return; }
+  d.hidden = false;
+  d.textContent = engineName() + " | " + video.videoWidth + "x" + video.videoHeight + " | frames " + diag.frames + " | " + diag.ms + " ms | reads " + diag.hits + (diag.err ? " | " + diag.err : "");
+}
+setInterval(showDiag, 700);
+// a still photo from the phone's camera app: full resolution and proper focus
+async function scanPhoto(file){
+  say("در حال خواندن عکس…", "info");
+  try {
+    await initDecoder();
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    canvas.width = w; canvas.height = h; ctx.drawImage(bmp, 0, 0, w, h);
+    let text = detector ? await nativeScan(canvas, w, h) : null;
+    if (!text && wasmOk) text = await wasmScan(ctx.getImageData(0, 0, w, h));
+    if (text) onScan(text, "photo");
+    else fail("در عکس بارکدی پیدا نشد. نزدیک‌تر، صاف‌تر و با نور بیشتر عکس بگیرید.");
+  } catch(e) { fail("عکس خوانده نشد."); }
 }
 async function loop(){
   if (!scanning) return;
@@ -558,6 +609,8 @@ $$(".modes button").forEach(b => b.addEventListener("click", () => setMode(b.dat
 $$("nav button").forEach(b => b.addEventListener("click", () => { show(b.dataset.view); render(); }));
 $$(".filters button").forEach(b => b.addEventListener("click", () => { listFilter = b.dataset.f; $$(".filters button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(); }));
 $("#camStart").addEventListener("click", startCam);
+$("#photoBtn").addEventListener("click", () => stopCam());
+$("#photoIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) scanPhoto(f); });
 $("#camStop").addEventListener("click", stopCam);
 $("#torchBtn").addEventListener("click", () => { if (!track) return; torchOn = !torchOn; track.applyConstraints({advanced:[{torch: torchOn}]}).catch(() => {}); });
 $("#manualForm").addEventListener("submit", e => { e.preventDefault(); const v = $("#manual").value; $("#manual").value = ""; onScan(v, "manual"); });

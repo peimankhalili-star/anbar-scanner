@@ -1,5 +1,5 @@
 // Offline cache for the warehouse scanner. Bump CACHE when any file changes.
-const CACHE = "wsc-v2";
+const CACHE = "wsc-v3";
 const FILES = ["./", "index.html", "locations.js", "zxing-reader.js", "zxing_reader.wasm", "manifest.webmanifest",
   "icon-192.png", "icon-512.png", "Vazirmatn-Regular.woff2", "Vazirmatn-Bold.woff2", "report.html"];
 
