@@ -24,7 +24,7 @@ header h1{font-size:18px;margin:0;flex:1}
 main{padding:12px 12px 0;max-width:640px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
 .modes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
-.modes button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 4px;font-weight:700;font-size:14px}
+.modes button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 2px;font-weight:700;font-size:14px}
 .modes button[aria-pressed=true]{background:var(--dark);color:#F6F4EF;border-color:var(--dark)}
 .cam{position:relative;background:#111;border-radius:14px;overflow:hidden;aspect-ratio:16/10;margin-bottom:10px}
 .cam video{width:100%;height:100%;object-fit:cover;display:block}
@@ -37,13 +37,14 @@ main{padding:12px 12px 0;max-width:640px;margin:0 auto}
 .btn.accent{background:var(--accent);color:var(--dark)}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.danger{background:var(--err-bg);color:var(--err);border:1px solid #F2B8C0}
+.btn.small{padding:8px 12px;font-size:14px}
 .btn:disabled{opacity:.45}
 .step{font-size:20px;font-weight:700;margin:2px 0 8px}
 .state{display:flex;flex-wrap:wrap;gap:8px}
 .pill{border-radius:10px;padding:8px 10px;background:#F1EEE7;border:1px solid var(--line);font-size:15px}
 .pill b{display:block;font-size:12px;color:var(--muted);font-weight:400}
 .pill.on{background:#FFF4CC;border-color:var(--accent)}
-.qty{display:flex;align-items:center;gap:8px;margin-top:10px}
+.qty{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
 .qty input{width:96px;text-align:center;font-size:22px;font-weight:700;border:2px solid var(--line);border-radius:10px;padding:8px}
 .qty .pm{width:48px;height:48px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:24px;font-weight:700}
 .row{display:flex;gap:8px;align-items:center}
@@ -61,6 +62,7 @@ main{padding:12px 12px 0;max-width:640px;margin:0 auto}
 .list .what small{display:block;color:var(--muted)}
 .tag{font-size:12px;border-radius:6px;padding:2px 8px;background:#F1EEE7;white-space:nowrap}
 .tag.put{background:#E3F3E7;color:#1E5A30}.tag.pick{background:#FBE9D4;color:#7A3E00}.tag.count{background:#E4ECF7;color:#1E3F70}.tag.move{background:#EFE4F7;color:#4E2A70}
+.tag.rcv{background:#D9F0E8;color:#0E5A43}.tag.iss{background:#FFE7C7;color:#7A3E00}.tag.out{background:#FBE4E7;color:#8A0A1F}.tag.ret{background:#E9E4F7;color:#3E2A78}
 .sent{font-size:12px;color:var(--ok)}
 .del{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px;font-size:13px}
 .del.confirm{background:var(--err-bg);color:var(--err);border-color:#F2B8C0}
@@ -80,6 +82,24 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 .overlay{position:fixed;inset:0;z-index:20;background:rgba(31,42,51,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .overlay .card{width:100%;max-width:420px}
 .qty input[readonly]{background:#FFF4CC;border-color:var(--accent)}
+.doc{border:2px solid var(--accent)}
+.types{display:flex;flex-wrap:wrap;gap:6px}
+.types button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px}
+.types button[aria-pressed=true]{background:var(--dark);color:#fff;border-color:var(--dark)}
+.recs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.recs button{width:100%;text-align:right;border:1px solid var(--line);background:#FBFAF6;border-radius:10px;padding:10px;font-size:14px;line-height:1.7}
+.sel{display:flex;align-items:center;gap:8px;background:#FFF4CC;border:1px solid var(--accent);border-radius:10px;padding:10px;font-size:15px;line-height:1.7}
+.sel > div{flex:1;min-width:0}
+.docbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.docbar .what{flex:1;min-width:0;line-height:1.8}
+.warn{color:var(--err);font-weight:700}
+.sugs{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sugi{border:1px solid var(--line);background:#FBFAF6;border-radius:10px;padding:10px;font-size:14px;line-height:1.8}
+.sugi .row{margin-top:6px;flex-wrap:wrap}
+.sugi .row > *{flex:0 0 auto}
+.sugi .btn{padding:10px 18px}
+.sugi bdi.code{white-space:nowrap}
+.sugi.first{border:2px solid var(--accent);background:#FFF8DD}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -115,10 +135,66 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
   <!-- scan -->
   <section id="vScan" hidden>
     <div class="modes" role="group" aria-label="نوع کار">
+      <button data-mode="rcv">رسید</button>
       <button data-mode="put">چیدن</button>
-      <button data-mode="pick">برداشت</button>
-      <button data-mode="count">شمارش</button>
+      <button data-mode="iss">تحویل پذیرش</button>
+      <button data-mode="out">خروج</button>
+      <button data-mode="ret">برگشت</button>
       <button data-mode="move">جابه‌جایی</button>
+      <button data-mode="count">شمارش</button>
+    </div>
+
+    <!-- document header: receipt, delivery to reception, issue, return -->
+    <div class="card doc" id="docCard" hidden>
+      <div id="docEdit">
+        <!-- receipt: a part was scanned before a reception was chosen; receptions waiting for it -->
+        <div id="sugBox" hidden>
+          <div class="step" id="sugTitle"></div>
+          <ul class="sugs" id="sugList"></ul>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost small" id="sugChg">شارژ انبار</button>
+            <button class="btn ghost small" id="sugManual">انتخاب دستی</button>
+          </div>
+        </div>
+        <div id="docForm">
+        <div class="step" id="docTitle">رسید جدید</div>
+        <div class="types" id="typeBox" role="group" aria-label="نوع سند"></div>
+        <div id="recBox" hidden>
+          <label for="recSearch">پذیرش و شاسی</label>
+          <div class="sel" id="recSel" hidden><div id="recSelText"></div><button class="btn ghost small" id="recClear">تغییر</button></div>
+          <div id="recFind">
+            <input id="recSearch" class="field" dir="ltr" inputmode="text" autocomplete="off" placeholder="چند رقم آخر پذیرش یا شاسی">
+            <p class="help" id="recHint">بارکد برگ پذیرش یا شاسی را هم می‌شود اسکن کرد.</p>
+            <ul class="recs" id="recResults"></ul>
+            <div id="recOutBox" hidden class="stack" style="margin-top:8px">
+              <button class="btn ghost small" id="recOutBtn">پذیرش خارج از فهرست (رمز مدیر)</button>
+              <div id="recOutForm" hidden class="stack">
+                <label for="recOutNo">شماره پذیرش</label>
+                <input id="recOutNo" class="field" dir="ltr" inputmode="numeric">
+                <label for="recOutVin">شماره شاسی (۱۷ حرف)</label>
+                <input id="recOutVin" class="field" dir="ltr" autocomplete="off">
+                <button class="btn small" id="recOutOk">ثبت این پذیرش</button>
+              </div>
+            </div>
+          </div>
+          <p class="warn" id="recWarn" hidden></p>
+        </div>
+        <div id="refBox" hidden>
+          <label for="refIn" id="refLbl">شماره سند مرجع</label>
+          <input id="refIn" class="field" dir="ltr" autocomplete="off">
+        </div>
+        <div id="partyBox" hidden>
+          <label for="partyIn" id="partyLbl">طرف</label>
+          <input id="partyIn" class="field" autocomplete="off">
+        </div>
+        <p class="help" id="docHelp"></p>
+        <button class="btn accent" id="docStart" style="width:100%">شروع</button>
+        </div>
+      </div>
+      <div class="docbar" id="docOpen" hidden>
+        <div class="what" id="docOpenText"></div>
+        <button class="btn accent small" id="docFinish">پایان سند</button>
+      </div>
     </div>
 
     <div class="cam">
@@ -149,6 +225,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
         <input id="qty" type="number" inputmode="numeric" min="1" step="1" value="1" aria-label="تعداد">
         <button class="pm" id="qPlus" aria-label="اضافه کردن">+</button>
         <button class="btn accent" id="saveBtn" style="flex:1">ذخیره</button>
+        <button class="btn ghost small" id="qManual" hidden>تعداد دستی</button>
       </div>
       <div class="row" style="margin-top:10px">
         <button class="btn ghost" id="cancelPart" hidden>لغو قطعه</button>
@@ -192,6 +269,13 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
       <p class="help">یک فایل Excel (CSV) ساخته می‌شود. در صفحه اشتراک گوشی، بله، تلگرام، ایمیل یا Quick Share را بزنید و برای کامپیوتر انبار بفرستید. فایل در Excel با فارسی درست باز می‌شود.</p>
     </div>
     <div class="card stack">
+      <div class="step" style="font-size:16px">فهرست پذیرش‌ها</div>
+      <p class="help" id="listInfo">هنوز فهرستی روی این گوشی نیست.</p>
+      <label class="btn ghost" for="listIn" style="text-align:center;margin:0">بارگذاری فایل فهرست</label>
+      <input type="file" id="listIn" accept=".json,application/json" hidden>
+      <p class="help">فایل فهرست را مدیر هر روز در صفحه گزارش کامپیوتر از خروجی سیستم می‌سازد و برای گوشی‌ها می‌فرستد. فهرست فقط روی همین گوشی می‌ماند و جایی فرستاده نمی‌شود.</p>
+    </div>
+    <div class="card stack">
       <button class="btn danger" id="clearSent">پاک کردن ثبت‌های ارسال‌شده</button>
       <p class="help">ثبت‌ها تا وقتی پاکشان نکنید روی همین گوشی می‌مانند، حتی بدون اینترنت. فقط بعد از اینکه فایل روی کامپیوتر رسید، پاک کنید.</p>
     </div>
@@ -222,8 +306,30 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 "use strict";
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
-const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1";
-const MODE_FA = {put:"چیدن", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
+const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1", K_LIST = "wsc.list.v1";
+const MODE_FA = {rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
+// Documents: every line of a receipt, delivery, issue or return carries the document's header.
+// rec: reception and chassis required; ref / party: "req" required, "opt" optional
+const TYPES = {
+  rcv: [
+    {k:"VIS", t:"VIS", rec:true},
+    {k:"VOR", t:"VOR", rec:true},
+    {k:"CHG", t:"شارژ انبار", ref:"opt", refLbl:"شماره حواله یا فاکتور شرکت (اختیاری)"},
+    {k:"OPEN", t:"خرید آزاد", rec:true, party:"opt", partyLbl:"فروشنده (اختیاری)"},
+    {k:"DLR", t:"خرید بین نمایندگان", rec:true, party:"req", partyLbl:"نمایندگی فروشنده"}],
+  iss: [{k:"WS", t:"تحویل به تعمیرگاه", rec:true, party:"opt", partyLbl:"تحویل‌گیرنده (اختیاری)"}],
+  out: [
+    {k:"SALE", t:"فروش مستقیم", ref:"req", refLbl:"شماره فاکتور فروش"},
+    {k:"TFX", t:"انتقال به فونیکس", ref:"req", refLbl:"شماره سند انتقال"},
+    {k:"TMK", t:"انتقال به مدیران", ref:"req", refLbl:"شماره سند انتقال"},
+    {k:"RTS", t:"برگشت به تأمین‌کننده", ref:"req", refLbl:"شماره سند برگشت"},
+    {k:"SCR", t:"اسقاط", ref:"req", refLbl:"شماره برچسب قرمز یا صورت‌جلسه"},
+    {k:"OTH", t:"سایر", ref:"req", refLbl:"شماره سند"}],
+  ret: [{k:"OK", t:"سالم", rec:true}, {k:"BAD", t:"معیوب", rec:true}]
+};
+const DOC_TITLE = {rcv:"رسید جدید", iss:"تحویل قطعه به پذیرش", out:"خروج از انبار", ret:"برگشت از تعمیرگاه"};
+const DOC_MODES = new Set(Object.keys(TYPES));
+const AUTO_COUNT = new Set(["rcv", "iss", "out", "ret", "count"]);   // one scan = one piece
 const LOCS = new Set(WS_DATA.locations);
 
 function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
@@ -234,7 +340,12 @@ function rid(){ return Math.random().toString(36).slice(2,6).toUpperCase(); }
 
 let settings = load(K_SET, null) || {user:"", device: rid()};
 let records = load(K_REC, []);
-let st = {mode:"put", step:"loc", loc:null, part:null, qty:1, toLoc:null};
+let recList = load(K_LIST, null);
+let st = {mode: settings.lastMode && MODE_FA[settings.lastMode] && settings.lastMode !== "pick" ? settings.lastMode : "rcv",
+  step:"loc", loc:null, part:null, qty:1, toLoc:null, manualQty:false, doc:null,
+  hdr:{type:null, rec:null, ref:"", party:""},
+  pending:null,   // receipt: part scanned before its reception was chosen; saved as the first line of the document
+  sug:null};      // receipt: receptions waiting for the pending part
 
 // ---------- codes ----------
 function norm(s){
@@ -250,14 +361,106 @@ function classify(c){
   if (m) return LOCS.has(m[1] + "-" + m[2] + "-" + m[3]) ? {kind:"loc", code:c} : {kind:"badloc", code:c};
   if (/^(HLD|RCV|RTN|VAL)-\d{2}$/.test(c)) return LOCS.has(c) ? {kind:"loc", code:c} : {kind:"badloc", code:c};
   if (/^S\d{1,2}-[A-E]$/.test(c)) return {kind:"loc", code:c};
+  const r = c.match(/^R([0-9A-Z]{6,16})$/);                 // reception slip printed by the report page
+  if (r && (/^\d+$/.test(r[1]) || findRec(r[1]))) return {kind:"rec", code:r[1]};
+  if (/^\d{8,14}$/.test(c) && findRec(c)) return {kind:"rec", code:c};
+  if (/^[A-HJ-NPR-Z0-9]{17}$/.test(c) && findVin(c)) return {kind:"vin", code:c};
   return {kind:"part", code:c};
 }
-function locCompany(c){ const m = /^(\d{2})-/.exec(c || ""); return m ? (WS_DATA.rowOwner[m[1]] || null) : null; }
+// company of a location; rows 28 and 29 are split by column, and one column can be shared ("LK/MN")
+function locCompany(c){
+  const m = /^(\d{2})-(\d{1,2})-/.exec(c || "");
+  if (!m) return null;
+  const col = (WS_DATA.colOwner || {})[m[1] + "-" + Number(m[2])];
+  if (col) return col.join("/");
+  return WS_DATA.rowOwner[m[1]] || null;
+}
 function locLabel(c){
   const co = locCompany(c);
-  if (co) return WS_DATA.companies[co] || co;
+  if (co) return co.split("/").map(k => WS_DATA.companies[k] || k).join(" و ");
   if (/^S\d/.test(c)) return "رک سپر";
+  if (/^HLD/.test(c)) return "رزرو پذیرش";
+  if (/^RCV/.test(c)) return "دریافت";
+  if (/^RTN/.test(c)) return "برگشتی و معیوب";
+  if (/^VAL/.test(c)) return "ارزشمند";
   return "منطقه مشترک";
+}
+
+// ---------- receptions list ----------
+function listRows(){ return recList && Array.isArray(recList.rows) ? recList.rows : []; }
+function findRec(no){ return listRows().find(x => x.r === no) || null; }
+function findVin(v){ return listRows().find(x => x.c === v) || null; }
+function searchRecs(q){
+  q = norm(q);
+  if (q.length < 3) return [];
+  return listRows().filter(x => x.r.includes(q) || x.c.includes(q)).slice(0, 6);
+}
+function recText(x){
+  const w = needLines().filter(L => L.r === x.r && !L.d).length;
+  return "پذیرش " + code(x.r) + (x.c ? " · شاسی " + code(x.c) : "") +
+    (x.m ? " · " + esc(x.m) : "") + (x.ch && x.ch.length ? " · " + esc(x.ch.join("، ")) : "") + (x.d ? " · " + code(x.d) : "") +
+    (x.s ? " · " + (/خروج/.test(x.s) ? '<span class="warn">' + esc(x.s) + "</span>" : "<b>" + esc(x.s) + "</b>") : "") +
+    (w ? " · <b>منتظر " + w + " قلم</b>" : "");
+}
+
+// ---------- open requests of receptions (the warehouse page «تحویل قطعات پذیرش», through the list file) ----------
+function needLines(){ return recList && recList.need && Array.isArray(recList.need.lines) ? recList.need.lines : []; }
+// the system's logistic code carries a supply suffix (S11-3502010-01); the label on the part may not
+function pkey(c){ return norm(c).replace(/-\d{2,3}$/, ""); }
+// a trailing variant segment such as -GB1, -IUN or -SN is ignored for a "similar code" match
+function lkey(c){ const k = pkey(c), m = k.match(/^(.+-[A-Z0-9]+)-([A-Z0-9]{1,4})$/); return m && /[A-Z]/.test(m[2]) ? m[1] : k; }
+// quantity this phone has already saved for a reception and part
+function scannedQty(mode, r, k){ return records.filter(x => x.mode === mode && x.rec === r && pkey(x.part) === k).reduce((a, x) => a + x.qty, 0); }
+// request lines matching a scanned part: level 1 same code, level 2 similar code
+function linesFor(pc, r){
+  const a = pkey(pc), b = lkey(pc);
+  return needLines().filter(L => !r || L.r === r).map(L => ({L, lv: pkey(L.p) === a ? 1 : lkey(L.p) === b ? 2 : 0})).filter(x => x.lv).sort((x, y) => x.lv - y.lv);
+}
+function recHasNeed(r){ return needLines().some(L => L.r === r); }
+// receipt type for a request line: VOR when the VOR list has it; else the reception's only VIS/VOR order channel
+function typesFor(L){
+  if (L.t === "VOR") return ["VOR"];
+  const x = findRec(L.r), vv = x && x.ch ? x.ch.filter(c => c === "VIS" || c === "VOR") : [];
+  return vv.length === 1 ? vv : ["VIS", "VOR"];
+}
+// receptions still waiting for a part: not delivered in the system and not yet fully received on this phone.
+// Same code before similar code, short of stock first, VOR first, older reception first.
+function sugItems(pc){
+  const seen = new Set(), out = [];
+  linesFor(pc).forEach(({L, lv}) => {
+    if (L.d || seen.has(L.r)) return;
+    const left = L.q - scannedQty("rcv", L.r, pkey(L.p));
+    if (left <= 0) return;
+    seen.add(L.r);
+    out.push({L, lv, left, short: L.s < L.q ? 1 : 0, types: typesFor(L), x: findRec(L.r)});
+  });
+  const vorOnly = it => it.types.length === 1 && it.types[0] === "VOR" ? 1 : 0, dOf = it => (it.x && it.x.d) || "9";
+  return out.sort((a, b) => (a.lv - b.lv) || (b.short - a.short) || (vorOnly(b) - vorOnly(a)) ||
+    (dOf(a) < dOf(b) ? -1 : dOf(a) > dOf(b) ? 1 : a.L.r < b.L.r ? -1 : 1)).slice(0, 8);
+}
+// warnings for a part scanned into an open receipt or delivery: not requested by this reception,
+// more than requested, or already delivered according to the system
+function lineFlags(pc, qtyNow){
+  const none = {warn:"", note:"", info:""}, d = st.doc;
+  if (!d || !needLines().length || (st.mode !== "rcv" && st.mode !== "iss")) return none;
+  if (st.mode === "rcv" && !d.rec) {
+    const w = sugItems(pc);
+    if (!w.length) return none;
+    return {warn: "این قطعه را پذیرش " + w.slice(0, 3).map(it => code(it.L.r)).join("، ") + " منتظر است. اگر برای همان خودرو آمده، این سند را ببندید و رسید VIS یا VOR همان پذیرش را بزنید.",
+      note: "در درخواست پذیرش " + w.map(it => it.L.r).join("، "), info: ""};
+  }
+  if (!d.rec || !recHasNeed(d.rec)) return none;
+  const mine = linesFor(pc, d.rec);
+  if (!mine.length) {
+    const others = linesFor(pc).filter(m => !m.L.d && m.L.r !== d.rec).map(m => m.L.r).filter((r, i, a) => a.indexOf(r) === i);
+    return {warn: "این قطعه در درخواست پذیرش " + code(d.rec) + " نیست." + (others.length ? " پذیرش منتظر این قطعه: " + others.slice(0, 3).map(code).join("، ") + "." : ""),
+      note: "خارج از درخواست پذیرش", info: ""};
+  }
+  const L = mine[0].L, sim = mine[0].lv === 2 ? " (کد مشابه " + code(L.p) + ")" : "";
+  if (st.mode === "iss" && L.d) return {warn: "طبق سیستم، این قطعه " + code(L.d.slice(0, 10)) + " به همین پذیرش تحویل شده است." + sim, note: "در سیستم قبلاً تحویل شده", info: ""};
+  const total = scannedQty(st.mode, d.rec, pkey(L.p)) + qtyNow;
+  if (total > L.q) return {warn: "بیشتر از تعداد درخواستی: درخواست " + L.q + "، با این اسکن " + total + "." + sim, note: "بیش از تعداد درخواستی", info: ""};
+  return {warn: "", note: mine[0].lv === 2 ? "کد مشابه " + L.p : "", info: " | درخواست " + total + " از " + L.q + sim};
 }
 
 // ---------- dates ----------
@@ -287,6 +490,96 @@ function say(html, kind){ const m = $("#msg"); m.className = "msg " + (kind || "
 function ok(html){ say(html, "ok"); beep(true); }
 function fail(html){ say(html, "err"); beep(false); }
 
+// ---------- document header ----------
+function typeDef(){ const ts = TYPES[st.mode] || []; return ts.length === 1 ? ts[0] : ts.find(t => t.k === st.hdr.type) || null; }
+function missing(){
+  const t = typeDef();
+  if (!t) return "نوع سند را انتخاب کنید.";
+  if (t.rec && !st.hdr.rec) return "پذیرش را انتخاب کنید: بارکد برگ پذیرش یا شاسی را اسکن کنید، یا چند رقم آخرش را بنویسید.";
+  if (t.ref === "req" && !st.hdr.ref) return t.refLbl + " را بنویسید.";
+  if (t.party === "req" && !st.hdr.party) return t.partyLbl + " را بنویسید.";
+  return "";
+}
+function recWarning(){
+  const t = typeDef(), x = st.hdr.rec;
+  if (!t || !x) return "";
+  if (st.mode === "iss" && /خروج/.test(x.s || "")) return "این خودرو در فهرست «" + x.s + "» است. قبل از تحویل قطعه، با پذیرش‌گر چک کنید.";
+  if (!x.ch || !x.ch.length || st.mode !== "rcv") return "";
+  if ((t.k === "VIS" || t.k === "VOR") && !x.ch.some(c => c === t.k)) return "این پذیرش در فهرست سفارش " + t.k + " ندارد. اگر مطمئن نیستید، نوع رسید را دوباره نگاه کنید.";
+  return "";
+}
+function selectRec(x){
+  st.hdr.rec = x;
+  // a receipt for a reception with a single VIS or VOR order gets that type by itself; a VIS/VOR type
+  // carried over from the previous receipt never sticks to a reception that has both, or the other one
+  if (st.mode === "rcv" && x.ch) {
+    const vv = x.ch.filter(c => c === "VIS" || c === "VOR");
+    const fresh = !st.hdr.type || (st.hdr.carried && (st.hdr.type === "VIS" || st.hdr.type === "VOR"));
+    if (fresh) st.hdr.type = vv.length === 1 ? vv[0] : (st.hdr.carried && vv.length === 2 ? null : st.hdr.type);
+    st.hdr.carried = false;
+  }
+  // a part already scanned for this receipt: the request line of this reception tells VIS or VOR
+  if (st.mode === "rcv" && st.pending) {
+    const m = linesFor(st.pending, x.r)[0];
+    if (m) { const ts = typesFor(m.L); if (ts.length === 1) st.hdr.type = ts[0]; }
+  }
+  st.sug = null;
+  $("#recSearch").value = "";
+}
+// receipt: a part was scanned before the reception was chosen
+function openSug(pc){
+  st.pending = pc;
+  const items = sugItems(pc);
+  st.sug = {code: pc, items};
+  if (items.length === 1) ok("قطعه " + code(pc) + ": پذیرش " + code(items[0].L.r) + " منتظر این قطعه است. برای تأیید، دکمه رسید را بزنید.");
+  else if (items.length) ok("قطعه " + code(pc) + ": " + items.length + " پذیرش منتظر این قطعه‌اند. پذیرش درست را انتخاب کنید.");
+  else fail("قطعه " + code(pc) + " در درخواست هیچ پذیرش بازی نیست (فهرست " + esc(recList.need.made || "") + "). اگر شارژ انبار است، «شارژ انبار» را بزنید.");
+}
+function applySug(r, type){
+  const x = findRec(r) || {r, c:"", ch:[], d:"", m:"", s:""};
+  st.sug = null;
+  st.hdr = {type, rec: x, ref:"", party:"", carried:false};
+  $("#recSearch").value = "";
+  const why = missing();
+  if (why) { fail(esc(why)); return; }
+  startDoc();
+}
+// the part goes on the document line being filled, with any request warning
+function setPart(pc, prefix){
+  st.part = pc; st.step = "qty"; st.manualQty = false; setQty(1);
+  const f = lineFlags(pc, 1), head = (prefix || "") + "قطعه " + code(pc) + " | تعداد 1";
+  if (f.warn) { say(head + "<br>" + f.warn, "err"); beep(false); }
+  else ok(head + f.info);
+}
+function newDocId(){
+  const day = jDate(new Date()).replace(/\//g, "");
+  const s = settings.docSeq && settings.docSeq.day === day ? settings.docSeq.n + 1 : 1;
+  settings.docSeq = {day, n: s}; store(K_SET, settings);
+  return settings.device + "-" + day + "-" + String(s).padStart(3, "0");
+}
+function startDoc(){
+  const t = typeDef(), x = st.hdr.rec;
+  st.doc = {id: newDocId(), mode: st.mode, type: t.k, typeFa: t.t,
+    rec: t.rec && x ? x.r : "", chassis: t.rec && x ? x.c : "", ch: t.rec && x && x.ch ? x.ch.join("/") : "",
+    ref: t.ref ? st.hdr.ref : "", party: t.party ? st.hdr.party : "", lines: 0, qty: 0};
+  st.step = "part"; st.sug = null;
+  const extra = st.mode === "ret" && t.k === "BAD" ? " قطعه معیوب به منطقه RTN می‌رود." : "";
+  if (st.pending) { const p = st.pending; st.pending = null; setPart(p, "سند " + code(st.doc.id) + " باز شد. "); return; }
+  ok("سند " + code(st.doc.id) + " باز شد. قطعه‌ها را اسکن کنید؛ هر اسکن یک عدد." + extra);
+}
+function finishDoc(quiet){
+  if (!st.doc) return true;
+  if (st.step === "qty" && !commit()) return false;
+  const d = st.doc;
+  st.doc = null; st.step = "doc"; st.part = null; st.manualQty = false; st.loc = null; st.pending = null; st.sug = null;
+  st.hdr = {type: st.hdr.type, rec: null, ref: "", party: "", carried: !!st.hdr.type};
+  if (!quiet) {
+    if (d.lines) ok("سند " + code(d.id) + " بسته شد: " + d.lines + " قلم، " + d.qty + " عدد.");
+    else say("سند بدون قطعه بسته شد.", "info");
+  }
+  return true;
+}
+
 // ---------- flow ----------
 function onScan(raw, src){
   const c0 = norm(raw);
@@ -294,6 +587,8 @@ function onScan(raw, src){
   const c = classify(c0);
   if (c.kind === "badloc") { fail("کد " + code(c0) + " شبیه آدرس است، ولی در فهرست مکان‌های انبار نیست."); return; }
   if (st.mode === "move") { moveFlow(c); render(); return; }
+  if (DOC_MODES.has(st.mode)) { docFlow(c); render(); return; }
+  if (c.kind === "rec" || c.kind === "vin") { fail("این بارکد پذیرش است. برای رسید، تحویل یا برگشت، اول همان حالت را انتخاب کنید."); return; }
   if (c.kind === "loc") {
     if (st.step === "qty" && !commit()) return;
     const changed = st.loc && st.loc !== c.code;
@@ -303,14 +598,60 @@ function onScan(raw, src){
   }
   if (!st.loc) { fail("این بارکد قطعه است. اول بارکد مکان را اسکن کنید."); return; }
   if (st.step === "qty") {
-    if (c.code === st.part) { setQty(st.qty + 1); ok(code(c.code) + " | تعداد " + st.qty); render(); return; }
+    if (c.code === st.part) { addOne(); render(); return; }
     if (!commit()) return;
   }
-  st.part = c.code; st.step = "qty"; setQty(1);
+  st.part = c.code; st.step = "qty"; st.manualQty = false; setQty(1);
   ok("قطعه " + code(c.code));
   render();
 }
+function addOne(){
+  if (st.manualQty) { fail("تعداد این قلم دستی است. «ثبت این قلم» را بزنید، بعد قطعه بعدی."); return; }
+  setQty(st.qty + 1);
+  const f = DOC_MODES.has(st.mode) ? lineFlags(st.part, st.qty) : {warn:"", info:""};
+  if (f.warn) { say(code(st.part) + " | تعداد " + st.qty + "<br>" + f.warn, "err"); beep(false); }
+  else ok(code(st.part) + " | تعداد " + st.qty + (f.info || ""));
+}
+function docFlow(c){
+  if (c.kind === "rec" || c.kind === "vin") {
+    const x = c.kind === "rec" ? findRec(c.code) : findVin(c.code);
+    if (!x) { fail("پذیرش " + code(c.code) + " در فهرست این گوشی نیست. فهرست را به‌روز کنید، یا «پذیرش خارج از فهرست» را بزنید."); return; }
+    const t = typeDef();
+    if (!TYPES[st.mode].some(y => y.rec) || (t && !t.rec)) { fail("این نوع سند پذیرش نمی‌گیرد."); return; }
+    if (st.doc) {
+      if (st.doc.rec === x.r) { say("همین پذیرش باز است.", "info"); return; }
+      if (!finishDoc(true)) return;
+    }
+    selectRec(x);
+    const w = recWarning();
+    if (!missing()) { startDoc(); if (w) { say(w, "err"); beep(false); } }
+    else ok(recText(x) + "<br>" + esc(missing()));
+    return;
+  }
+  if (c.kind === "loc") {
+    if (st.step === "qty" && !commit()) return;
+    st.loc = c.code;
+    let note = "";
+    if (st.mode === "ret" && st.doc && st.doc.type === "BAD" && !/^RTN/.test(c.code)) note = " | قطعه معیوب باید در RTN باشد.";
+    if (note) fail("مکان " + code(c.code) + note); else ok("مکان " + code(c.code) + " | " + esc(locLabel(c.code)));
+    return;
+  }
+  if (!st.doc) {
+    const why = missing(), t = typeDef();
+    // receipt without a reception yet: the open requests tell which receptions wait for this part
+    if (why && st.mode === "rcv" && needLines().length && (!t || t.rec)) { openSug(c.code); return; }
+    if (why) { fail(esc(why)); return; }
+    startDoc();
+    if (st.step === "qty" && c.code === st.part) return;   // the pending part was this one: already on the line
+  }
+  if (st.step === "qty") {
+    if (c.code === st.part) { addOne(); return; }
+    if (!commit()) return;
+  }
+  setPart(c.code);
+}
 function moveFlow(c){
+  if (c.kind === "rec" || c.kind === "vin") { fail("جابه‌جایی پذیرش نمی‌گیرد."); return; }
   if (st.step === "loc") {
     if (c.kind !== "loc") { fail("اول بارکد مکان مبدأ را اسکن کنید."); return; }
     st.loc = c.code; st.step = "part"; ok("مبدأ " + code(c.code)); return;
@@ -340,29 +681,45 @@ function commit(note){
   const q = Math.floor(Number($("#qty").value));
   if (!(q > 0)) { fail("تعداد را درست وارد کنید."); return null; }
   if (st.mode === "move" && !st.toLoc) { fail("اول بارکد مکان مقصد را اسکن کنید."); return null; }
+  const d = st.doc || {};
+  const fl = st.doc ? lineFlags(st.part, q) : {note:""};
   const rec = {id: settings.device + "-" + Date.now().toString(36) + rid(), ts: new Date().toISOString(),
-    user: settings.user, device: settings.device, mode: st.mode, loc: st.loc, toLoc: st.toLoc || "",
-    part: st.part, qty: q, note: note || "", sent: false};
+    user: settings.user, device: settings.device, mode: st.mode, loc: st.loc || "", toLoc: st.toLoc || "",
+    part: st.part, qty: q, note: [note, fl.note, st.manualQty ? "تعداد دستی با رمز مدیر" : ""].filter(Boolean).join("؛ "),
+    doc: d.id || "", dtype: d.typeFa || "", rec: d.rec || "", chassis: d.chassis || "", ref: d.ref || "", party: d.party || "", ch: d.ch || "",
+    sent: false};
   records.push(rec);
   if (!store(K_REC, records)) { records.pop(); fail("حافظه گوشی پر است؛ اول ثبت‌ها را بفرستید و پاک کنید."); return null; }
-  st.part = null; st.toLoc = null; st.step = st.loc ? "part" : "loc"; setQty(1);
-  if (st.mode !== "move") ok("ذخیره شد: " + code(rec.part) + " × " + rec.qty + " در " + code(rec.loc));
+  if (st.doc) { st.doc.lines++; st.doc.qty += q; }
+  st.part = null; st.toLoc = null; st.manualQty = false;
+  st.step = st.doc ? "part" : (st.loc ? "part" : "loc"); setQty(1);
+  if (st.mode !== "move") ok("ذخیره شد: " + code(rec.part) + " × " + rec.qty + (rec.loc ? " در " + code(rec.loc) : "") + (rec.rec ? " | پذیرش " + code(rec.rec) : ""));
   render();
   return rec;
 }
 function setMode(m){
   if (m === st.mode) return;
-  if (st.step === "qty" && st.mode !== "move" && !commit()) return;
-  st.mode = m; st.part = null; st.toLoc = null; setQty(1);
-  if (m === "move") st.loc = null;
-  st.step = st.loc ? "part" : "loc";
-  say("حالت " + esc(MODE_FA[m]) + ".", "info");
+  const closing = st.doc && st.doc.lines + (st.step === "qty" ? 1 : 0) ? st.doc.id : null;
+  if (st.doc) { if (!finishDoc(true)) return; }
+  else if (st.step === "qty" && st.mode !== "move" && !commit()) return;
+  st.mode = m; st.part = null; st.toLoc = null; st.manualQty = false; st.pending = null; st.sug = null; setQty(1);
+  settings.lastMode = m; store(K_SET, settings);
+  if (DOC_MODES.has(m)) { st.loc = null; st.step = "doc"; st.hdr = {type:null, rec:null, ref:"", party:""}; }
+  else { if (m === "move") st.loc = null; st.step = st.loc ? "part" : "loc"; }
+  say((closing ? "سند " + code(closing) + " بسته شد. " : "") + "حالت " + esc(MODE_FA[m]) + ".", "info");
   render();
 }
 
 // ---------- render ----------
 function stepText(){
   const mv = st.mode === "move";
+  if (DOC_MODES.has(st.mode)) {
+    if (st.step === "doc" && st.sug) return st.sug.items.length ? "پذیرش این قطعه را انتخاب کنید" : "پذیرشی منتظر این قطعه نیست";
+    if (st.step === "doc" && st.pending) return "نوع رسید و پذیرش را انتخاب کنید؛ قطعه بعد از شروع سند خودش ثبت می‌شود";
+    if (st.step === "doc") return "اول سند را مشخص کنید";
+    if (st.step === "part") return "بارکد قطعه را اسکن کنید" + (st.mode === "rcv" ? "؛ مکان اختیاری است (مثلاً HLD یا RCV)" : st.mode === "ret" ? "" : "؛ مکان برداشت اختیاری است");
+    return "هر بوق یعنی یک عدد. برای عدد بعدی گوشی را کمی دور و نزدیک کنید. قطعه دیگر یا «پایان سند»";
+  }
   if (st.step === "loc") return mv ? "بارکد مکان مبدأ را اسکن کنید" : "بارکد مکان را اسکن کنید";
   if (st.step === "part") return "بارکد قطعه را اسکن کنید";
   if (mv) return "تعداد را بزنید، بعد بارکد مکان مقصد را اسکن کنید";
@@ -371,11 +728,67 @@ function stepText(){
 }
 function recItem(r, withDel){
   const d = new Date(r.ts);
-  const where = code(r.loc) + (r.toLoc ? " ← " + code(r.toLoc) : "");
-  return '<li><span class="tag ' + r.mode + '">' + esc(MODE_FA[r.mode]) + '</span>' +
-    '<div class="what">' + code(r.part) + " × " + r.qty + "<small>" + where + " | " + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
+  const where = (r.loc ? code(r.loc) : "") + (r.toLoc ? " ← " + code(r.toLoc) : "");
+  const head = (r.dtype ? esc(r.dtype) : "") + (r.rec ? " | پذیرش " + code(r.rec) : "") + (r.ref ? " | سند " + code(r.ref) : "");
+  return '<li><span class="tag ' + esc(r.mode) + '">' + esc(MODE_FA[r.mode] || r.mode) + '</span>' +
+    '<div class="what">' + code(r.part) + " × " + r.qty + "<small>" + (head ? head + " | " : "") + (where ? where + " | " : "") + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
     (r.sent ? ' | <span class="sent">ارسال‌شده</span>' : "") + (r.note ? " | " + esc(r.note) : "") + "</small></div>" +
     (withDel ? '<button class="del" data-del="' + esc(r.id) + '">حذف</button>' : "") + "</li>";
+}
+function renderDoc(){
+  const isDoc = DOC_MODES.has(st.mode);
+  $("#docCard").hidden = !isDoc;
+  if (!isDoc) return;
+  const open = !!st.doc;
+  $("#docEdit").hidden = open; $("#docOpen").hidden = !open;
+  if (open) {
+    const d = st.doc;
+    $("#docOpenText").innerHTML = "<b>" + esc(MODE_FA[d.mode]) + " · " + esc(d.typeFa) + "</b>" +
+      (d.rec ? "<br>پذیرش " + code(d.rec) + (d.chassis ? " · شاسی " + code(d.chassis) : "") : "") +
+      (d.ref ? "<br>سند مرجع " + code(d.ref) : "") + (d.party ? "<br>" + esc(d.party) : "") +
+      "<br><small>سند " + code(d.id) + " · " + d.lines + " قلم، " + d.qty + " عدد</small>";
+    return;
+  }
+  const sg = st.mode === "rcv" ? st.sug : null;
+  $("#sugBox").hidden = !sg; $("#docForm").hidden = !!sg;
+  if (sg) {
+    $("#sugTitle").innerHTML = "قطعه " + code(sg.code) + (sg.items.length ? " برای کدام پذیرش است؟" : ": پذیرشی منتظرش نیست");
+    $("#sugList").innerHTML = sg.items.map((it, i) => {
+      const L = it.L, x = it.x;
+      return '<li class="sugi' + (i === 0 ? " first" : "") + '"><div>پذیرش ' + code(L.r) + (x && x.c ? " · شاسی " + code(x.c) : "") + (x && x.m ? " · " + esc(x.m) : "") +
+        (x && x.ch && x.ch.length ? " · " + esc(x.ch.join("، ")) : "") +
+        "<br>" + esc(L.n || "") + " " + code(L.p) + (it.lv === 2 ? ' <span class="tag pick">کد مشابه</span>' : "") +
+        "<br><b>منتظر " + it.left + " عدد</b> · موجودی سیستم " + L.s + (L.t === "VOR" ? ' · <span class="tag out">VOR' + (L.o ? " سفارش " + code(L.o) : "") + "</span>" : "") + "</div>" +
+        '<div class="row">' + it.types.map(ty => '<button class="btn ' + (it.types.length === 1 ? "accent" : "") + ' small" data-sr="' + esc(L.r) + '" data-st="' + ty + '">رسید ' + ty + "</button>").join("") + "</div></li>";
+    }).join("") || '<li class="help">در فهرست درخواست‌های باز (' + esc(recList.need.made || "") + ") هیچ پذیرشی این قطعه را نخواسته است.</li>";
+    return;
+  }
+  const ts = TYPES[st.mode], t = typeDef();
+  $("#docTitle").textContent = DOC_TITLE[st.mode];
+  $("#typeBox").hidden = ts.length < 2;
+  $("#typeBox").innerHTML = ts.length < 2 ? "" : ts.map(x => '<button data-type="' + x.k + '" aria-pressed="' + (x.k === st.hdr.type) + '">' + esc(x.t) + "</button>").join("");
+  const needRec = !!(t && t.rec) || (!t && ts.some(x => x.rec) && st.mode !== "out");
+  $("#recBox").hidden = !needRec;
+  const x = st.hdr.rec;
+  $("#recSel").hidden = !x; $("#recFind").hidden = !!x;
+  $("#recSelText").innerHTML = x ? recText(x) + (x.manual ? '<br><small class="warn">خارج از فهرست</small>' : "") : "";
+  const w = recWarning(); $("#recWarn").hidden = !w; $("#recWarn").textContent = w;
+  if (!x) {
+    const q = $("#recSearch").value, hits = searchRecs(q);
+    $("#recResults").innerHTML = hits.map(h => '<li><button data-rec="' + esc(h.r) + '">' + recText(h) + "</button></li>").join("");
+    const n = listRows().length;
+    $("#recHint").textContent = n ? "بارکد برگ پذیرش یا شاسی را هم می‌شود اسکن کرد. فهرست: " + n + " پذیرش، " + (recList.made || "") + "."
+      : "فهرست پذیرش‌ها روی این گوشی نیست. از صفحه «ارسال» فایل فهرست را بارگذاری کنید.";
+    $("#recOutBox").hidden = norm(q).length < 3 || hits.length > 0;
+  }
+  $("#refBox").hidden = !(t && t.ref);
+  if (t && t.ref) { $("#refLbl").textContent = t.refLbl; if (document.activeElement !== $("#refIn")) $("#refIn").value = st.hdr.ref; }
+  $("#partyBox").hidden = !(t && t.party);
+  if (t && t.party) { $("#partyLbl").textContent = t.partyLbl; if (document.activeElement !== $("#partyIn")) $("#partyIn").value = st.hdr.party; }
+  const why = missing();
+  $("#docStart").disabled = !!why;
+  $("#docHelp").innerHTML = esc(why ? why : "آماده است. «شروع» را بزنید یا اولین قطعه را اسکن کنید.") +
+    (st.pending ? "<br>قطعه " + code(st.pending) + " بعد از شروع سند، خودش اولین قلم می‌شود." : "");
 }
 let listFilter = "today";
 function render(){
@@ -383,10 +796,12 @@ function render(){
   const unsent = records.filter(r => !r.sent).length;
   $("#unsentChip").textContent = unsent;
   $$(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === st.mode));
+  renderDoc();
+  const isDoc = DOC_MODES.has(st.mode), auto = AUTO_COUNT.has(st.mode);
   $("#stepText").textContent = stepText();
-  $("#pLocLbl").textContent = st.mode === "move" ? "مبدأ" : "مکان";
+  $("#pLocLbl").textContent = st.mode === "move" ? "مبدأ" : isDoc ? "مکان (اختیاری)" : "مکان";
   $("#pLocVal").innerHTML = st.loc ? code(st.loc) + " " + esc(locLabel(st.loc)) : "—";
-  $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + st.qty : "—";
+  $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + st.qty : st.pending ? code(st.pending) + " <small>منتظر انتخاب پذیرش</small>" : "—";
   $("#pLoc").classList.toggle("on", st.step === "loc");
   $("#pPart").classList.toggle("on", st.step === "part");
   $("#pTo").hidden = st.mode !== "move";
@@ -394,9 +809,13 @@ function render(){
   $("#pToVal").innerHTML = st.toLoc ? code(st.toLoc) : "—";
   $("#qtyBox").hidden = st.step !== "qty";
   $("#saveBtn").hidden = st.mode === "move";
-  $("#qty").readOnly = st.mode === "count";
-  $("#qPlus").hidden = st.mode === "count";
-  $("#cancelPart").hidden = st.step !== "qty";
+  $("#saveBtn").textContent = isDoc ? "ثبت این قلم" : "ذخیره";
+  $("#qty").readOnly = auto && !st.manualQty;
+  $("#qPlus").hidden = auto && !st.manualQty;
+  $("#qManual").hidden = !auto || st.manualQty || st.step !== "qty";
+  $("#cancelPart").hidden = st.step !== "qty" && !st.pending;
+  $("#newLoc").textContent = isDoc ? "پاک کردن مکان" : "مکان جدید";
+  $("#newLoc").hidden = isDoc && !st.loc;
   $("#recent").innerHTML = records.slice(-5).reverse().map(r => recItem(r, false)).join("") || '<li class="help">هنوز ثبتی نیست.</li>';
   const list = records.filter(r => listFilter === "all" || (listFilter === "unsent" ? !r.sent : isToday(r.ts)));
   $("#allList").innerHTML = list.slice().reverse().map(r => recItem(r, true)).join("") || '<li class="help">چیزی برای نمایش نیست.</li>';
@@ -409,6 +828,20 @@ function render(){
   $("#shareUnsent").disabled = unsent === 0;
   $("#shareAll").disabled = records.length === 0;
   $("#downloadAll").disabled = records.length === 0;
+  renderListInfo();
+}
+function renderListInfo(){
+  const n = listRows().length;
+  if (!n) { $("#listInfo").textContent = "هنوز فهرستی روی این گوشی نیست."; return; }
+  const age = recList.madeTs ? Math.floor((Date.now() - Date.parse(recList.madeTs)) / 86400000) : null;
+  let needTxt = "";
+  if (recList.need) {
+    const open = needLines().filter(L => !L.d).length;
+    const hrs = recList.need.madeTs ? (Date.now() - Date.parse(recList.need.madeTs)) / 36e5 : 0;
+    needTxt = "<br>درخواست‌های باز پذیرش‌ها: " + open + " قلم، گرفته‌شده " + code(recList.need.made || "?") +
+      (hrs > 18 ? ' <span class="warn">(مال دیروز یا قبل‌تر است؛ فهرست امروز را بگیرید)</span>' : "");
+  } else needTxt = '<br><span class="help">این فهرست درخواست‌های پذیرش‌ها را ندارد؛ برنامه پذیرش قطعه را پیشنهاد نمی‌دهد.</span>';
+  $("#listInfo").innerHTML = n + " پذیرش، ساخته‌شده " + code(recList.made || "?") + (age != null && age >= 2 ? ' <span class="warn">(' + age + " روز پیش؛ فهرست تازه بگیرید)</span>" : "") + needTxt;
 }
 function show(view){
   $$("main > section").forEach(s => s.hidden = s.id !== view);
@@ -567,11 +1000,13 @@ async function loop(){
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopCam(); });
 
 // ---------- export ----------
+const CSV_HEAD = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت",
+  "شناسه سند","نوع سند","شماره پذیرش","شاسی","شماره مرجع","طرف","کانال سفارش"];
 function csvOf(rows){
-  const head = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت"];
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const lines = [head.map(q).join(",")];
-  rows.forEach(r => { const d = new Date(r.ts); lines.push([r.id, jDate(d), jTime(d), r.ts, r.user, r.device, MODE_FA[r.mode], r.loc, r.toLoc, r.part, r.qty, r.note].map(q).join(",")); });
+  const lines = [CSV_HEAD.map(q).join(",")];
+  rows.forEach(r => { const d = new Date(r.ts); lines.push([r.id, jDate(d), jTime(d), r.ts, r.user, r.device, MODE_FA[r.mode] || r.mode, r.loc, r.toLoc, r.part, r.qty, r.note,
+    r.doc, r.dtype, r.rec, r.chassis, r.ref, r.party, r.ch].map(q).join(",")); });
   return "﻿" + lines.join("\r\n") + "\r\n";
 }
 function fileName(){
@@ -583,7 +1018,9 @@ function download(blob, name){
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
 }
-async function sendRows(rows, forceDownload){
+async function sendRows(which, forceDownload){
+  if (st.doc && !finishDoc()) return;     // an open document's last line is saved first
+  const rows = which === "unsent" ? records.filter(r => !r.sent) : records.slice();
   if (!rows.length) return;
   const name = fileName();
   const blob = new Blob([csvOf(rows)], {type:"text/csv;charset=utf-8"});
@@ -618,17 +1055,72 @@ $("#qMinus").addEventListener("click", () => { setQty(st.qty - 1); render(); });
 $("#qPlus").addEventListener("click", () => { setQty(st.qty + 1); render(); });
 $("#qty").addEventListener("input", () => { const n = Math.floor(Number($("#qty").value)); if (n > 0) { st.qty = n; $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + n : "—"; } });
 $("#saveBtn").addEventListener("click", () => commit());
-$("#cancelPart").addEventListener("click", () => { st.part = null; st.toLoc = null; st.step = st.loc ? "part" : "loc"; setQty(1); say("قطعه لغو شد.", "info"); render(); });
-$("#newLoc").addEventListener("click", () => { if (st.step === "qty" && st.mode !== "move" && !commit()) return; st.loc = null; st.part = null; st.toLoc = null; st.step = "loc"; say("مکان جدید را اسکن کنید.", "info"); render(); });
+$("#qManual").addEventListener("click", async () => {
+  if (!(await askPin("برای وارد کردن تعداد با دست (مثلاً کارتن بسته)، رمز مدیر لازم است."))) return;
+  st.manualQty = true; render(); $("#qty").focus(); $("#qty").select();
+  say("تعداد را بنویسید و «" + esc($("#saveBtn").textContent) + "» را بزنید.", "info");
+});
+$("#cancelPart").addEventListener("click", () => {
+  const wasPending = !st.part && st.pending;
+  st.part = null; st.toLoc = null; st.manualQty = false; st.pending = null; st.sug = null;
+  st.step = DOC_MODES.has(st.mode) ? (st.doc ? "part" : "doc") : st.loc ? "part" : "loc"; setQty(1);
+  say(wasPending ? "قطعه لغو شد؛ چیزی ثبت نشد." : "قطعه لغو شد.", "info"); render();
+});
+// receipt suggestions
+$("#sugList").addEventListener("click", e => { const b = e.target.closest("[data-sr]"); if (!b) return; applySug(b.dataset.sr, b.dataset.st); render(); });
+$("#sugChg").addEventListener("click", () => { st.sug = null; st.hdr = {type:"CHG", rec:null, ref:"", party:""}; startDoc(); render(); });
+$("#sugManual").addEventListener("click", () => { st.sug = null; say("نوع رسید و پذیرش را انتخاب کنید. قطعه " + code(st.pending) + " بعد از شروع سند خودش ثبت می‌شود.", "info"); render(); });
+$("#newLoc").addEventListener("click", () => {
+  if (DOC_MODES.has(st.mode)) { if (st.step === "qty" && !commit()) return; st.loc = null; say("مکان پاک شد.", "info"); render(); return; }
+  if (st.step === "qty" && st.mode !== "move" && !commit()) return; st.loc = null; st.part = null; st.toLoc = null; st.step = "loc"; say("مکان جدید را اسکن کنید.", "info"); render();
+});
+// document header
+$("#typeBox").addEventListener("click", e => { const b = e.target.closest("[data-type]"); if (!b) return; st.hdr.type = b.dataset.type; st.hdr.carried = false; render(); });
+$("#recSearch").addEventListener("input", () => renderDoc());
+$("#recResults").addEventListener("click", e => { const b = e.target.closest("[data-rec]"); if (!b) return; const x = findRec(b.dataset.rec); if (x) { selectRec(x); render(); } });
+$("#recClear").addEventListener("click", () => { st.hdr.rec = null; render(); $("#recSearch").focus(); });
+$("#recOutBtn").addEventListener("click", async () => {
+  if (!(await askPin("پذیرشی که در فهرست نیست فقط با رمز مدیر ثبت می‌شود."))) return;
+  $("#recOutForm").hidden = false; $("#recOutNo").value = norm($("#recSearch").value).replace(/\D/g, ""); $("#recOutVin").value = ""; $("#recOutVin").focus();
+});
+$("#recOutOk").addEventListener("click", () => {
+  const no = norm($("#recOutNo").value).replace(/\D/g, ""), vin = norm($("#recOutVin").value);
+  if (no.length < 6) { fail("شماره پذیرش را کامل بنویسید."); return; }
+  if (!/^[A-Z0-9]{17}$/.test(vin)) { fail("شماره شاسی باید ۱۷ حرف و عدد باشد."); return; }
+  $("#recOutForm").hidden = true;
+  selectRec({r: no, c: vin, ch: [], manual: true}); render(); ok("پذیرش " + code(no) + " خارج از فهرست انتخاب شد.");
+});
+$("#refIn").addEventListener("input", () => { st.hdr.ref = norm($("#refIn").value); renderDoc(); });
+$("#partyIn").addEventListener("input", () => { st.hdr.party = $("#partyIn").value.trim(); renderDoc(); });
+$("#docStart").addEventListener("click", () => { const why = missing(); if (why) { fail(esc(why)); return; } startDoc(); render(); });
+$("#docFinish").addEventListener("click", () => { finishDoc(); render(); });
+// receptions list file
+$("#listIn").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!o || o.kind !== "wsc-list" || !Array.isArray(o.rows)) throw new Error("bad");
+    o.rows = o.rows.filter(x => x && x.r).map(x => ({r: String(x.r), c: String(x.c || "").toUpperCase(), ch: Array.isArray(x.ch) ? x.ch : [], d: x.d || "", m: x.m || "", s: x.s || ""}));
+    if (o.need && Array.isArray(o.need.lines)) {
+      o.need = {made: String(o.need.made || ""), madeTs: o.need.madeTs || "",
+        lines: o.need.lines.filter(L => L && L.r && L.p).map(L => ({r: String(L.r), p: norm(L.p), n: String(L.n || ""), q: Number(L.q) || 0, s: Number(L.s) || 0,
+          d: String(L.d || ""), t: L.t === "VOR" ? "VOR" : "", o: String(L.o || "")}))};
+    } else delete o.need;
+    if (!store(K_LIST, o)) { fail("حافظه گوشی برای فهرست کافی نیست."); return; }
+    recList = o; st.sug = null; render();
+    ok("فهرست بارگذاری شد: " + o.rows.length + " پذیرش" + (o.need ? "، " + o.need.lines.filter(L => !L.d).length + " قلم درخواست باز" : "") + ".");
+  } catch(err) { fail("این فایل، فایل فهرست پذیرش‌ها نیست."); }
+});
 $("#allList").addEventListener("click", async e => {
   const b = e.target.closest("[data-del]"); if (!b) return;
   const id = b.dataset.del;
   if (!(await askPin("برای حذف یک ثبت، رمز مدیر لازم است."))) return;
   records = records.filter(r => r.id !== id); store(K_REC, records); render(); say("ثبت حذف شد.", "info");
 });
-$("#shareUnsent").addEventListener("click", () => sendRows(records.filter(r => !r.sent), false));
-$("#shareAll").addEventListener("click", () => sendRows(records.slice(), false));
-$("#downloadAll").addEventListener("click", () => sendRows(records.slice(), true));
+$("#shareUnsent").addEventListener("click", () => sendRows("unsent", false));
+$("#shareAll").addEventListener("click", () => sendRows("all", false));
+$("#downloadAll").addEventListener("click", () => sendRows("all", true));
 $("#clearSent").addEventListener("click", e => twoTap(e.currentTarget, "مطمئنید؟ دوباره بزنید", () => { records = records.filter(r => !r.sent); store(K_REC, records); render(); say("ثبت‌های ارسال‌شده پاک شدند.", "info"); }));
 $("#unsentChip").addEventListener("click", () => { show("vSend"); render(); });
 // ---------- manager PIN ----------
@@ -695,16 +1187,17 @@ $("#saveSetup").addEventListener("click", async () => {
     const salt = rid() + rid() + rid();
     pin = {salt, hash: await hashPin(p1, salt)};
   }
-  settings = {user: n, device: dv, pin}; store(K_SET, settings);
+  settings = Object.assign({}, settings, {user: n, device: dv, pin}); store(K_SET, settings);
   show("vScan"); render(); say("ذخیره شد. کارمند: " + esc(n) + "، گوشی " + code(dv), "ok");
 });
 let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; $("#installBtn").hidden = false; });
 $("#installBtn").addEventListener("click", async () => { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch(e) {} deferredInstall = null; $("#installBtn").hidden = true; });
 
-$("#aboutBox").innerHTML = "فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
+$("#aboutBox").innerHTML = "نسخه 6. فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
-window.__wsc = {onScan, state: () => st, records: () => records};
+window.__wsc = {onScan, state: () => st, records: () => records, finishDoc, list: () => recList, sugItems, lineFlags, pkey, lkey};
+if (DOC_MODES.has(st.mode)) st.step = "doc";
 if (!settings.user || !settings.pin) openSetup(false); else show("vScan");
 render();
 })();

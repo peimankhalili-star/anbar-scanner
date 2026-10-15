@@ -15,11 +15,12 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}
 bdi.code{font-weight:700;direction:ltr;unicode-bidi:isolate}
 header{background:var(--dark);color:#F6F4EF;padding:14px 20px;border-bottom:4px solid var(--accent);display:flex;align-items:center;gap:12px}
 header h1{font-size:20px;margin:0;flex:1}
-main{max-width:1200px;margin:0 auto;padding:16px}
+main{max-width:1280px;margin:0 auto;padding:16px}
+h2{font-size:17px;margin:0 0 10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
-.drop{display:block;cursor:pointer;border:2px dashed #C9C3B6;border-radius:14px;padding:28px;text-align:center;background:#FBFAF6}
+.drop{display:block;cursor:pointer;border:2px dashed #C9C3B6;border-radius:14px;padding:24px;text-align:center;background:#FBFAF6}
 .drop.over{border-color:var(--accent);background:#FFF8DD}
-.drop b{display:block;font-size:18px;margin-bottom:6px}
+.drop b{display:block;font-size:17px;margin-bottom:6px}
 .btn{border:none;border-radius:10px;padding:10px 16px;font-weight:700;background:var(--dark);color:#F6F4EF;cursor:pointer}
 .btn.accent{background:var(--accent);color:var(--dark)}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -28,8 +29,10 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
 .stat b{display:block;font-size:22px}
 .filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end}
-.filters label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-.filters input,.filters select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--card)}
+.filters label,.inline label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.filters input,.filters select,.inline input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--card)}
+.inline{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px}
+.inline > div{width:160px}
 .msg{border-radius:10px;padding:10px 12px;margin-bottom:14px;font-weight:700}
 .msg.ok{background:var(--ok-bg);color:var(--ok)}
 .msg.err{background:var(--err-bg);color:var(--err)}
@@ -41,24 +44,64 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
 .summary .pill{background:#FFF4CC;border:1px solid var(--accent);border-radius:10px;padding:8px 12px}
 .summary .pill small{display:block;color:var(--muted);font-size:12px}
 .help{color:var(--muted);font-size:14px;line-height:1.8}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#printArea{display:none}
 [hidden]{display:none!important}
-@media (max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}}
+@media (max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  body > *:not(#printArea){display:none!important}
+  #printArea{display:block}
+  .sheet{width:210mm;height:297mm;display:grid;grid-template-columns:repeat(3,70mm);grid-auto-rows:37.125mm;page-break-after:always;break-after:page}
+  .slip{box-sizing:border-box;padding:3mm 4mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;font-size:9pt;line-height:1.35;text-align:center;overflow:hidden}
+  .slip b{font-size:11pt}
+  .slip svg{display:block}
+}
 </style>
 </head>
 <body>
 <header>
-  <h1>گزارش اسکن‌ها: هر قطعه، کی، کجا، توسط چه کسی</h1>
+  <h1>گزارش انبار: اسکن‌ها، رسیدها و تحویل‌ها</h1>
   <button class="btn accent" id="xlsxBtn" disabled>دانلود Excel</button>
 </header>
 <main>
-  <div class="card">
-    <label class="drop" id="drop">
-      <b>فایل‌های CSV همه گوشی‌ها را اینجا بکشید</b>
-      <span class="help">یا کلیک کنید و چند فایل را با هم انتخاب کنید. فایل تکراری یا ثبت تکراری یک بار حساب می‌شود.</span>
-      <input type="file" id="files" accept=".csv,text/csv" multiple hidden>
-    </label>
+  <div class="two">
+    <div class="card">
+      <h2>۱. فایل‌های اسکن گوشی‌ها</h2>
+      <label class="drop" id="drop">
+        <b>فایل‌های CSV همه گوشی‌ها را اینجا بکشید</b>
+        <span class="help">یا کلیک کنید و چند فایل را با هم انتخاب کنید. فایل تکراری یا ثبت تکراری یک بار حساب می‌شود.</span>
+        <input type="file" id="files" accept=".csv,text/csv" multiple hidden>
+      </label>
+    </div>
+    <div class="card">
+      <h2>۲. فهرست پذیرش‌ها برای گوشی‌ها</h2>
+      <label class="drop" id="dropX">
+        <b>خروجی‌های سیستم را اینجا بکشید</b>
+        <span class="help">Excel گزارش وضعیت درخواست‌ها (RepSalesRequest) و فهرست پذیرش‌ها، و فایل‌های دکمه «خروجی انبار»: قطعه‌های منتظر پذیرش‌ها (anbar_need) و لیست VOR (anbar_vor). هر کدام که دارید.</span>
+        <input type="file" id="xfiles" accept=".xlsx,.json" multiple hidden>
+      </label>
+      <div class="inline">
+        <div><label for="days">سفارش‌های چند روز اخیر</label><input id="days" type="number" min="7" max="365" value="90" dir="ltr"></div>
+        <button class="btn accent" id="listBtn" disabled>دانلود فایل فهرست برای گوشی‌ها</button>
+        <button class="btn ghost" id="slipBtn" disabled>چاپ بارکد پذیرش‌ها</button>
+      </div>
+      <p class="help" id="listMsg"></p>
+    </div>
   </div>
   <div class="msg" id="msg" hidden></div>
+
+  <div class="card" id="needCard" hidden>
+    <h2>درخواست‌های باز پذیرش‌ها (از صفحه «تحویل قطعات پذیرش»)</h2>
+    <p class="help" id="needHelp"></p>
+    <div class="tablewrap" style="max-height:45vh">
+      <table>
+        <thead><tr><th>پذیرش</th><th>کد قطعه</th><th>وضعیت</th><th>درخواستی</th><th>موجودی سیستم</th><th>رسید اسکن‌شده</th><th>تحویل اسکن‌شده</th><th>VOR</th><th>عنوان قطعه</th><th>شاسی</th></tr></thead>
+        <tbody id="needRows"></tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="stats" id="stats" hidden>
     <div class="stat"><b id="stFiles">0</b>فایل</div>
@@ -68,9 +111,20 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
     <div class="stat"><b id="stRange">—</b>بازه تاریخ</div>
   </div>
 
+  <div class="card" id="waitCard" hidden>
+    <h2>قطعه‌های رسیده برای پذیرش که هنوز تحویل نشده‌اند</h2>
+    <p class="help" id="waitHelp"></p>
+    <div class="tablewrap" style="max-height:40vh">
+      <table>
+        <thead><tr><th>پذیرش</th><th>شاسی</th><th>کد قطعه</th><th>رسیده</th><th>تحویل‌شده</th><th>مانده</th><th>نوع رسید</th><th>آخرین رسید</th></tr></thead>
+        <tbody id="waitRows"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="card" id="filterCard" hidden>
     <div class="filters">
-      <div><label for="fText">کد قطعه یا مکان</label><input id="fText" dir="ltr" placeholder="S11-3502010 یا 16-3-C"></div>
+      <div><label for="fText">کد قطعه، مکان، پذیرش، شاسی یا سند</label><input id="fText" dir="ltr" placeholder="S11-3502010 یا 16-3-C یا 1530602685"></div>
       <div><label for="fStaff">کارمند</label><select id="fStaff"><option value="">همه</option></select></div>
       <div><label for="fMode">عملیات</label><select id="fMode"><option value="">همه</option></select></div>
       <div><label for="fFrom">از تاریخ</label><input id="fFrom" dir="ltr" placeholder="1405/07/01"></div>
@@ -87,28 +141,51 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
     <p class="help" id="shown"></p>
     <div class="tablewrap">
       <table>
-        <thead><tr><th>تاریخ</th><th>ساعت</th><th>کارمند</th><th>عملیات</th><th>مکان</th><th>مکان مقصد</th><th>کد قطعه</th><th>تعداد</th><th>گوشی</th></tr></thead>
+        <thead><tr><th>تاریخ</th><th>ساعت</th><th>کارمند</th><th>عملیات</th><th>نوع سند</th><th>پذیرش</th><th>شاسی</th><th>مکان</th><th>مکان مقصد</th><th>کد قطعه</th><th>تعداد</th><th>سند مرجع</th><th>شناسه سند</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
   </div>
 
+  <div class="card" id="bmCard">
+    <h2>دکمه «خروجی انبار» برای سیستم مدیران (یک بار نصب)</h2>
+    <div class="inline" style="margin-top:0">
+      <a class="btn accent" id="bmLink" href="#">خروجی انبار</a>
+      <button class="btn ghost" id="bmCopy">کپی کد دکمه</button>
+    </div>
+    <ol class="help">
+      <li>در Chrome نوار بوکمارک را روشن کنید (Ctrl+Shift+B).</li>
+      <li>دکمه زرد «خروجی انبار» را با موس بگیرید و روی نوار بوکمارک رها کنید. همین یک بار کافی است.</li>
+      <li>هر روز صبح در سیستم: مدیریت انبار نمایندگان ← <b>تحویل قطعات پذیرش</b>، بعد روی بوکمارک «خروجی انبار» بزنید. چند ثانیه بعد فایل <bdi class="code">anbar_need_….json</bdi> دانلود می‌شود.</li>
+      <li>برای VOR (اختیاری، با حسابی که «لیست VOR» دارد): گزارشات تعمیرگاه ← لیست VOR، بازه سه ماه اخیر و جستجو، بعد همان بوکمارک. فایل <bdi class="code">anbar_vor_….json</bdi> دانلود می‌شود.</li>
+    </ol>
+    <p class="help">این دکمه فقط می‌خواند: برای هر پذیرش همان «جستجو» را می‌زند و جدول را برمی‌دارد. هیچ دکمه ثبت، تحویل یا حذفی را نمی‌زند. نام تحویل‌گیرنده‌ها و مشتری‌ها در فایل نمی‌رود.</p>
+    <p class="help" id="bmMsg"></p>
+  </div>
+
   <div class="card help">
-    این صفحه روی همین کامپیوتر کار می‌کند و فایل‌ها را جایی نمی‌فرستد. فایل Excel چهار برگه دارد: جست‌وجوی قطعه (کد قطعه را در خانه زرد بنویسید)، خلاصه قطعه‌ها، کارمندان و همه ثبت‌ها.
+    این صفحه روی همین کامپیوتر کار می‌کند و فایل‌ها را جایی نمی‌فرستد. فایل Excel شش برگه دارد: جست‌وجوی قطعه (کد قطعه را در خانه زرد بنویسید)، پذیرش‌ها، اسناد، خلاصه قطعه‌ها، کارمندان و همه ثبت‌ها؛ اگر فایل قطعه‌های منتظر را هم بکشید، برگه «درخواست‌های باز» هم اضافه می‌شود.
+    فایل فهرست پذیرش‌ها فقط شماره پذیرش، شاسی، کانال سفارش، مدل، تاریخ و قطعه‌های درخواستی را دارد؛ نام و تلفن مشتری در آن نمی‌رود.
   </div>
 </main>
+<div id="printArea"></div>
 <script>
 (function(){
 "use strict";
 const $ = s => document.querySelector(s);
-const HEAD = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت"];
-const KEY = ["id","date","time","ts","user","device","mode","loc","toLoc","part","qty","note"];
+const HEAD = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت",
+  "شناسه سند","نوع سند","شماره پذیرش","شاسی","شماره مرجع","طرف","کانال سفارش"];
+const KEY = ["id","date","time","ts","user","device","mode","loc","toLoc","part","qty","note","doc","dtype","rec","chassis","ref","party","ch"];
+const M = {rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
 let all = new Map(), fileNames = new Set(), dupCount = 0;
 
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function code(s){ return '<bdi class="code">' + esc(s) + '</bdi>'; }
 function normDigits(s){ return String(s || "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).trim(); }
 function say(t, kind){ const m = $("#msg"); m.hidden = false; m.className = "msg " + kind; m.innerHTML = t; }
+let jFmt = null;
+try { jFmt = new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {timeZone:"Asia/Tehran", year:"numeric", month:"2-digit", day:"2-digit"}); } catch(e) {}
+function jDate(d){ if (!jFmt) return d.toISOString().slice(0,10); const p = {}; jFmt.formatToParts(d).forEach(x => p[x.type] = x.value); return p.year + "/" + p.month + "/" + p.day; }
 
 // ---------- CSV ----------
 function parseCSV(text){
@@ -154,6 +231,52 @@ async function loadFiles(list){
   refreshOptions(); render();
 }
 
+// ---------- receptions: received for a reception vs delivered to it ----------
+function waiting(){
+  const m = new Map();
+  for (const r of all.values()) {
+    if (!r.rec || (r.mode !== M.rcv && r.mode !== M.iss && r.mode !== M.ret)) continue;
+    const k = r.rec + "\u0001" + r.part;
+    if (!m.has(k)) m.set(k, {rec:r.rec, chassis:"", part:r.part, rcv:0, iss:0, ret:0, types:new Set(), last:""});
+    const o = m.get(k);
+    if (r.chassis) o.chassis = r.chassis;
+    if (r.mode === M.rcv) { o.rcv += r.qty; o.types.add(r.dtype); if (r.date + " " + r.time > o.last) o.last = r.date + " " + r.time; }
+    else if (r.mode === M.iss) o.iss += r.qty;
+    else o.ret += r.qty;
+  }
+  return Array.from(m.values()).map(o => Object.assign(o, {left: Math.max(0, o.rcv - o.iss), types: Array.from(o.types).filter(Boolean).join("، ")}))
+    .sort((a, b) => a.rec < b.rec ? -1 : a.rec > b.rec ? 1 : a.part < b.part ? -1 : 1);
+}
+
+// ---------- open requests of the system vs what the phones scanned ----------
+function needStatus(){
+  if (!listOut || !listOut.need) return [];
+  const sc = new Map();
+  for (const r of all.values()) {
+    if (!r.rec || (r.mode !== M.rcv && r.mode !== M.iss)) continue;
+    const k = r.rec + "\u0001" + pkey(r.part);
+    if (!sc.has(k)) sc.set(k, {rcv:0, iss:0});
+    sc.get(k)[r.mode === M.rcv ? "rcv" : "iss"] += r.qty;
+  }
+  const chassis = new Map(listOut.rows.map(x => [x.r, x.c]));
+  return listOut.need.lines.filter(L => !L.d).map(L => {
+    const s = sc.get(L.r + "\u0001" + pkey(L.p)) || {rcv:0, iss:0};
+    const st = s.iss >= L.q ? "تحویل اسکن شده؛ در سیستم تحویل نخورده" : s.rcv > 0 ? "رسیده؛ به تعمیرگاه تحویل دهید" : L.s >= L.q ? "در انبار موجود است" : "منتظر رسیدن";
+    return {r:L.r, c:chassis.get(L.r) || "", p:L.p, n:L.n, q:L.q, s:L.s, vor: L.t === "VOR" ? (L.o || "VOR") : "", rcv:s.rcv, iss:s.iss, st};
+  }).sort((a, b) => a.r < b.r ? -1 : a.r > b.r ? 1 : a.p < b.p ? -1 : 1);
+}
+function renderNeed(){
+  const n = needStatus();
+  $("#needCard").hidden = !(listOut && listOut.need);
+  if (!listOut || !listOut.need) return;
+  const cnt = k => n.filter(o => o.st === k).length;
+  $("#needHelp").innerHTML = n.length + " قلم تحویل‌نشده در سیستم، گرفته‌شده " + code(listOut.need.made) + ". منتظر رسیدن: " + cnt("منتظر رسیدن") + "، در انبار موجود: " + cnt("در انبار موجود است") +
+    "، رسیده و آماده تحویل: " + cnt("رسیده؛ به تعمیرگاه تحویل دهید") + "، تحویل اسکن‌شده ولی ثبت‌نشده در سیستم: " + cnt("تحویل اسکن شده؛ در سیستم تحویل نخورده") + "." +
+    (all.size ? "" : " برای ستون‌های اسکن، فایل‌های گوشی‌ها را هم در کادر «۱» بکشید.");
+  $("#needRows").innerHTML = n.map(o => "<tr><td>" + code(o.r) + "</td><td>" + code(o.p) + "</td><td>" + (o.st === "منتظر رسیدن" || o.st === "در انبار موجود است" ? esc(o.st) : "<b>" + esc(o.st) + "</b>") +
+    "</td><td>" + o.q + "</td><td>" + o.s + "</td><td>" + (o.rcv || "") + "</td><td>" + (o.iss || "") + "</td><td>" + (o.vor ? code(o.vor) : "") + "</td><td>" + esc(o.n) + "</td><td>" + (o.c ? code(o.c) : "") + "</td></tr>").join("");
+}
+
 // ---------- view ----------
 function sorted(){ return Array.from(all.values()).sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0); }
 function filtered(){
@@ -161,7 +284,7 @@ function filtered(){
   const st = $("#fStaff").value, md = $("#fMode").value;
   const from = normDigits($("#fFrom").value), to = normDigits($("#fTo").value);
   return sorted().filter(r =>
-    (!t || r.part.toUpperCase().includes(t) || r.loc.toUpperCase().includes(t) || r.toLoc.toUpperCase().includes(t)) &&
+    (!t || [r.part, r.loc, r.toLoc, r.rec, r.chassis, r.doc, r.ref].some(v => String(v).toUpperCase().includes(t))) &&
     (!st || r.user === st) && (!md || r.mode === md) &&
     (!from || r.date >= from) && (!to || r.date <= to));
 }
@@ -177,11 +300,11 @@ function partSummary(rows){
   if (!t || !mine.length) return "";
   const last = mine[0];
   const sum = m => mine.filter(r => r.mode === m).reduce((a, r) => a + r.qty, 0);
-  const lastCount = mine.find(r => r.mode === "شمارش");
+  const lastCount = mine.find(r => r.mode === M.count);
   const pill = (k, v) => '<div class="pill"><small>' + esc(k) + "</small>" + v + "</div>";
-  return pill("قطعه", code(last.part)) + pill("تعداد ثبت", mine.length) + pill("آخرین مکان", code(last.toLoc || last.loc)) +
+  return pill("قطعه", code(last.part)) + pill("تعداد ثبت", mine.length) + pill("آخرین مکان", last.toLoc || last.loc ? code(last.toLoc || last.loc) : "—") +
     pill("آخرین ثبت", esc(last.date + " " + last.time.slice(0, 5)) + "، " + esc(last.user)) +
-    pill("جمع چیدن", sum("چیدن")) + pill("جمع برداشت", sum("برداشت")) +
+    pill("جمع رسید", sum(M.rcv)) + pill("جمع تحویل پذیرش", sum(M.iss)) + pill("جمع خروج", sum(M.out)) + pill("جمع برگشت", sum(M.ret)) +
     pill("آخرین شمارش", lastCount ? lastCount.qty + " در " + code(lastCount.loc) + "، " + esc(lastCount.date) : "—");
 }
 function render(){
@@ -189,6 +312,12 @@ function render(){
   const any = recs.length > 0;
   ["#stats", "#filterCard", "#tableCard"].forEach(s => $(s).hidden = !any);
   $("#xlsxBtn").disabled = !any;
+  const w = waiting().filter(o => o.left > 0);
+  $("#waitCard").hidden = !w.length;
+  $("#waitHelp").textContent = w.length + " ردیف. یعنی قطعه برای این پذیرش رسید خورده ولی اسکن تحویل به تعمیرگاه ندارد؛ یا هنوز در HLD است، یا بدون اسکن تحویل شده.";
+  $("#waitRows").innerHTML = w.map(o => "<tr><td>" + code(o.rec) + "</td><td>" + (o.chassis ? code(o.chassis) : "") + "</td><td>" + code(o.part) + "</td><td>" + o.rcv + "</td><td>" + o.iss +
+    "</td><td><b>" + o.left + "</b></td><td>" + esc(o.types) + "</td><td>" + code(o.last) + "</td></tr>").join("");
+  renderNeed();
   if (!any) return;
   $("#stFiles").textContent = fileNames.size;
   $("#stRows").textContent = recs.length;
@@ -201,9 +330,368 @@ function render(){
   $("#partCard").hidden = !ps; $("#partSummary").innerHTML = ps;
   const LIMIT = 1000;
   $("#shown").textContent = rows.length + " ثبت" + (rows.length > LIMIT ? "؛ " + LIMIT + " ثبت آخر نشان داده شده. همه در فایل Excel هست." : "");
+  const c = v => v ? code(v) : "";
   $("#rows").innerHTML = rows.slice(0, LIMIT).map(r => "<tr><td>" + code(r.date) + "</td><td>" + code(r.time) + "</td><td>" + esc(r.user) + "</td><td>" + esc(r.mode) +
-    "</td><td>" + code(r.loc) + "</td><td>" + (r.toLoc ? code(r.toLoc) : "") + "</td><td>" + code(r.part) + "</td><td>" + r.qty + "</td><td>" + code(r.device) + "</td></tr>").join("");
+    "</td><td>" + esc(r.dtype) + "</td><td>" + c(r.rec) + "</td><td>" + c(r.chassis) + "</td><td>" + c(r.loc) + "</td><td>" + c(r.toLoc) + "</td><td>" + code(r.part) + "</td><td>" + r.qty +
+    "</td><td>" + c(r.ref) + "</td><td>" + c(r.doc) + "</td></tr>").join("");
 }
+
+// ---------- reading Excel exports (.xlsx) without any library ----------
+async function readXlsx(file){
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let e = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+  if (e < 0) throw new Error("not xlsx");
+  const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+  const dec = new TextDecoder(), ents = {};
+  for (let k = 0; k < n && dv.getUint32(p, true) === 0x02014b50; k++) {
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    ents[dec.decode(buf.subarray(p + 46, p + 46 + nl)).replace(/^\//, "")] = {method, csize, off};
+    p += 46 + nl + xl + cl;
+  }
+  async function text(name){
+    const en = ents[name]; if (!en) return null;
+    const start = en.off + 30 + dv.getUint16(en.off + 26, true) + dv.getUint16(en.off + 28, true);
+    const raw = buf.subarray(start, start + en.csize);
+    if (en.method === 0) return dec.decode(raw);
+    if (en.method !== 8) throw new Error("zip method " + en.method);
+    return dec.decode(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  }
+  const P = s => new DOMParser().parseFromString(s, "application/xml");
+  const tags = (d, t) => Array.from(d.getElementsByTagNameNS("*", t));
+  const kids = (el, t) => Array.from(el.children).filter(x => x.localName === t);
+  const wb = P(await text("xl/workbook.xml"));
+  const sh = tags(wb, "sheet")[0];
+  const rid = sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id") || sh.getAttribute("r:id");
+  let target = "xl/worksheets/sheet1.xml", sstPath = null;
+  const relsText = await text("xl/_rels/workbook.xml.rels");
+  if (relsText) tags(P(relsText), "Relationship").forEach(r => {
+    const t = r.getAttribute("Target") || "", path = t.startsWith("/") ? t.slice(1) : "xl/" + t.replace(/^\.\//, "");
+    if (r.getAttribute("Id") === rid) target = path;
+    if (/sharedStrings$/.test(r.getAttribute("Type") || "")) sstPath = path;
+  });
+  const sst = [];
+  if (sstPath && ents[sstPath]) tags(P(await text(sstPath)), "si").forEach(si => sst.push(tags(si, "t").map(t => t.textContent).join("")));
+  const rows = [];
+  tags(P(await text(target)), "row").forEach(rw => {
+    const row = []; let ci = 0;
+    kids(rw, "c").forEach(c => {
+      const ref = c.getAttribute("r");
+      if (ref) { ci = 0; for (const ch of ref.replace(/\d+/g, "")) ci = ci * 26 + ch.charCodeAt(0) - 64; ci--; }
+      const t = c.getAttribute("t"), v = kids(c, "v")[0];
+      row[ci] = t === "s" ? (sst[Number(v && v.textContent)] || "") : t === "inlineStr" ? tags(c, "t").map(x => x.textContent).join("") : (v ? v.textContent : "");
+      ci++;
+    });
+    rows.push(Array.from(row, x => x == null ? "" : String(x).trim()));
+  });
+  return rows;
+}
+
+// ---------- «خروجی انبار» bookmark ----------
+// Runs inside the company system, in the user's own signed-in Chrome. It only reads: on «تحویل قطعات پذیرش»
+// it posts the page's own «جستجو» once per open reception and keeps the table; on «لیست VOR» it reads the
+// table already on screen. It never presses ثبت, تحویل or حذف. It must stay self-contained: the bookmark
+// is built from this function's source text.
+async function wscExport(opt){
+  opt = opt || {};
+  const nd = s => String(s == null ? "" : s).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).trim();
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const txt = el => (el ? el.textContent : "").replace(/\s+/g, " ").trim();
+  const cells = tr => Array.from(tr.children);
+  const leafRows = root => Array.from(root.querySelectorAll("tr")).filter(t => !t.querySelector("table"));
+  const pcode = s => nd(s).toUpperCase().replace(/\s+/g, "");
+  const num = s => Number(nd(s).replace(/,/g, "")) || 0;
+  let box = document.getElementById("wscBox");
+  if (!box) {
+    box = document.createElement("div"); box.id = "wscBox"; box.dir = "rtl";
+    box.style.cssText = "position:fixed;top:12px;left:12px;right:12px;z-index:2147483647;background:#1F2A33;color:#F6F4EF;font:15px/1.9 Tahoma,sans-serif;padding:14px 18px;border-radius:12px;border-bottom:5px solid #F2B705;box-shadow:0 6px 24px rgba(0,0,0,.35);text-align:right";
+    document.body.appendChild(box);
+  }
+  const show = (html, kind) => {
+    box.style.borderBottomColor = kind === "err" ? "#E0475B" : kind === "ok" ? "#3FB26B" : "#F2B705";
+    box.innerHTML = '<b>خروجی انبار</b><br>' + html + (kind === "info" ? "" : '<div style="margin-top:8px"><button type="button" id="wscClose" style="font:inherit;padding:4px 16px;border-radius:8px;border:0;cursor:pointer">بستن</button></div>');
+    const c = document.getElementById("wscClose"); if (c) c.onclick = () => box.remove();
+  };
+  const stamp = d => {
+    try {
+      const p = {};
+      new Intl.DateTimeFormat("fa-IR-u-ca-persian-nu-latn", {timeZone:"Asia/Tehran", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).formatToParts(d).forEach(x => p[x.type] = x.value);
+      return {made: p.year + "/" + p.month + "/" + p.day + " " + p.hour + ":" + p.minute, file: p.year + p.month + p.day + "_" + p.hour + p.minute};
+    } catch(e) { const s = d.toISOString(); return {made: s.slice(0, 16).replace("T", " "), file: s.slice(0, 10).replace(/-/g, "") + "_" + s.slice(11, 13) + s.slice(14, 16)}; }
+  };
+  const save = (obj, name) => {
+    if (opt.noDownload) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(obj)], {type:"application/json"})); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  };
+  const headerIndex = (trs, words) => trs.findIndex(t => { const s = txt(t); return words.every(w => s.indexOf(w) >= 0); });
+
+  async function need(){
+    const f = document.forms[0];
+    const els = f ? Array.from(f.elements) : [];
+    const sel = els.find(e => e.tagName === "SELECT" && /DbcReceipt$/i.test(e.name || ""));
+    const btn = els.find(e => e.type === "submit" && /Button1$/.test(e.name || "") && (e.value || "").trim() === "جستجو") || els.find(e => e.type === "submit" && (e.value || "").trim() === "جستجو");
+    if (!sel || !btn) throw new Error("فهرست پذیرش‌ها یا دکمه «جستجو» در این صفحه پیدا نشد. شاید صفحه سیستم عوض شده است.");
+    const recs = Array.from(new Set(Array.from(sel.options).map(o => nd(o.value)).filter(v => /^\d{6,}$/.test(v))));
+    if (!recs.length) { show("در این صفحه پذیرش بازی برای تحویل قطعه نیست.", "err"); return null; }
+    const rows = [], done = [], failed = [];
+    for (let i = 0; i < recs.length; i++) {
+      show("در حال خواندن پذیرش " + (i + 1) + " از " + recs.length + "… فقط خواندن؛ چیزی ثبت نمی‌شود.", "info");
+      const fd = new FormData(f);           // submit buttons are not part of FormData: only «جستجو» is added below
+      fd.set(sel.name, recs[i]); fd.set(btn.name, btn.value); fd.set("__EVENTTARGET", ""); fd.set("__EVENTARGUMENT", "");
+      let html = null;
+      try {
+        const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 30000);
+        const res = await fetch(location.pathname, {method:"POST", body:new URLSearchParams(fd), credentials:"same-origin", signal: ctl.signal});
+        html = res.ok ? await res.text() : null;
+        clearTimeout(timer);
+      } catch(e) { html = null; }
+      if (html === null) {
+        failed.push(recs[i]);
+        if (!done.length && failed.length >= 2) throw new Error("سیستم جواب نمی‌دهد. اتصال VPN و سیستم را چک کنید و دوباره بزنید.");
+        continue;
+      }
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      if (doc.querySelector("input[type=password]")) throw new Error("از سیستم خارج شده‌اید. دوباره وارد شوید و دکمه را دوباره بزنید.");
+      done.push(recs[i]);
+      const trs = leafRows(doc), hi = headerIndex(trs, ["کد قطعه", "تعداد درخواستی"]);
+      if (hi < 0) continue;
+      const H = cells(trs[hi]).map(txt), I = n => H.indexOf(n);
+      const iR = I("پذیرش"), iP = I("کد قطعه"), iN = I("عنوان قطعه"), iQ = I("تعداد درخواستی"), iS = I("موجودی"), iA = I("آدرس قطعه"), iZ = I("رزرو"), iD = I("تحویل");
+      for (const tr of trs.slice(hi + 1)) {
+        const c = cells(tr);
+        if (c.length < H.length - 1 || !txt(c[iP])) continue;
+        const z = iZ >= 0 && c[iZ] ? c[iZ].querySelector("input[type=checkbox]") : null;
+        rows.push({r: (iR >= 0 ? nd(txt(c[iR])) : "") || recs[i], p: pcode(txt(c[iP])), n: iN >= 0 ? txt(c[iN]) : "", q: num(txt(c[iQ])),
+          s: iS >= 0 ? num(txt(c[iS])) : 0, a: iA >= 0 ? txt(c[iA]) : "", z: z ? (z.checked ? 1 : 0) : (iZ >= 0 && txt(c[iZ]) ? 1 : 0),
+          d: iD >= 0 ? nd(txt(c[iD])) : ""});
+      }
+    }
+    const now = new Date(), s = stamp(now), name = "anbar_need_" + s.file + ".json";
+    const out = {kind:"wsc-need", v:1, src:"WSStockPartDelivery", made: s.made, madeTs: now.toISOString(), recs: done, failed, rows};
+    if (!done.length) throw new Error("هیچ پذیرشی خوانده نشد. اتصال به سیستم را چک کنید و دوباره بزنید.");
+    save(out, name);
+    const open = rows.filter(r => !r.d), short = open.filter(r => r.s < r.q);
+    show(done.length + " پذیرش باز و " + rows.length + " قلم درخواستی خوانده شد. " + open.length + " قلم هنوز تحویل نشده؛ " + short.length + " قلم از آن‌ها موجودی کافی ندارد." +
+      (failed.length ? '<br><span style="color:#FFB3BD">این پذیرش‌ها خوانده نشدند: ' + failed.map(esc).join("، ") + ". یک بار دیگر دکمه را بزنید.</span>" : "") +
+      (opt.noDownload ? "" : "<br>فایل <b>" + esc(name) + "</b> دانلود شد. آن را در صفحه گزارش انبار، کادر «۲»، بکشید."), failed.length ? "err" : "ok");
+    return out;
+  }
+
+  function vor(){
+    const trs = leafRows(document), hi = headerIndex(trs, ["کد فنی", "کد درخواست", "پذیرش"]);
+    if (hi < 0) { show("جدول لیست VOR روی صفحه نیست. اول بازه تاریخ (حداکثر سه ماه) را بزنید و جستجو کنید، بعد دوباره این دکمه را بزنید.", "err"); return null; }
+    const H = cells(trs[hi]).map(txt), I = n => H.indexOf(n);
+    const iT = I("کد فنی"), iN = I("شرح فنی"), iL = I("کد لجستیک"), iQ = I("تعداد"), iR = I("پذیرش"), iO = I("کد درخواست"), iF = I("شماره فاکتور"), iC = I("شاسی"), iA = I("فعال"), iX = I("حذف"), iDt = I("تاریخ ثبت");
+    const flag = cell => {
+      if (!cell) return 0;
+      const cb = cell.querySelector("input[type=checkbox]"); if (cb) return cb.checked ? 1 : 0;
+      const im = cell.querySelector("img"); if (im) return /true|ok|tick|check|yes/i.test((im.getAttribute("src") || "") + " " + (im.alt || "") + " " + (im.title || "")) ? 1 : 0;
+      return /^(بله|دارد|✓|✔|true|1|yes)$/i.test(txt(cell)) ? 1 : 0;
+    };
+    const rows = [];
+    for (const tr of trs.slice(hi + 1)) {
+      const c = cells(tr);
+      if (c.length < H.length - 1) continue;
+      const r = nd(txt(c[iR])).replace(/\D/g, ""), t = pcode(txt(c[iT]));
+      if (!r || !t) continue;
+      rows.push({r, t, p: iL >= 0 ? pcode(txt(c[iL])) : "", n: iN >= 0 ? txt(c[iN]) : "", q: num(txt(c[iQ])), o: iO >= 0 ? nd(txt(c[iO])) : "",
+        f: iF >= 0 ? nd(txt(c[iF])) : "", c: iC >= 0 ? pcode(txt(c[iC])) : "", dt: iDt >= 0 ? nd(txt(c[iDt])) : "", act: iA >= 0 ? flag(c[iA]) : 1, del: iX >= 0 ? flag(c[iX]) : 0});
+    }
+    const paged = !!document.querySelector('a[href*="Page$"]');
+    const now = new Date(), s = stamp(now), name = "anbar_vor_" + s.file + ".json";
+    const out = {kind:"wsc-vor", v:1, src:"Mng_VorRequest", made: s.made, madeTs: now.toISOString(), paged, rows};
+    save(out, name);
+    show(rows.length + " ردیف VOR برای " + new Set(rows.map(x => x.r)).size + " پذیرش خوانده شد." +
+      (paged ? '<br><span style="color:#FFB3BD">این جدول چند صفحه دارد و فقط همین صفحه خوانده شد. بازه تاریخ را کوتاه‌تر کنید و دوباره بزنید.</span>' : "") +
+      (opt.noDownload ? "" : "<br>فایل <b>" + esc(name) + "</b> دانلود شد. آن را در صفحه گزارش انبار، کادر «۲»، بکشید."), paged ? "err" : "ok");
+    return out;
+  }
+
+  const page = location.pathname.split("/").pop().toLowerCase();
+  try {
+    if (page === "wsstockpartdelivery.aspx") return await need();
+    if (page === "mng_vorrequest.aspx") return vor();
+    show("این دکمه فقط در دو صفحه سیستم مدیران کار می‌کند:<br>۱. مدیریت انبار نمایندگان ← <b>تحویل قطعات پذیرش</b><br>۲. گزارشات تعمیرگاه ← <b>لیست VOR</b> (بعد از جستجو)", "err");
+  } catch(e) { show("کار تمام نشد: " + esc((e && e.message) || e), "err"); }
+  return null;
+}
+const BOOKMARK = "javascript:" + encodeURIComponent("(" + wscExport.toString() + ")();void 0");
+
+// part codes: the system's logistic code carries a supply suffix (S11-3502010-01) that a label may not
+const pnorm = s => normDigits(s).toUpperCase().replace(/[‐-―−]/g, "-").replace(/\s+/g, "");
+const pkey = s => pnorm(s).replace(/-\d{2,3}$/, "");
+// a trailing variant segment such as -GB1, -IUN or -SN is ignored for a "similar code" match
+const lkey = s => { const k = pkey(s), m = k.match(/^(.+-[A-Z0-9]+)-([A-Z0-9]{1,4})$/); return m && /[A-Z]/.test(m[2]) ? m[1] : k; };
+
+// ---------- receptions list for the phones ----------
+let xReq = null, xRcp = null, xNeed = null, xVor = null, listOut = null;
+const chOf = s => /VIS/i.test(s) ? "VIS" : /VOR/i.test(s) ? "VOR" : s;
+// "14050723", "1405/07/23" or "1405/7/1_7:59" -> "14050701"
+const ymd = s => {
+  s = normDigits(s);
+  if (/^\d{8}/.test(s)) return s.slice(0, 8);
+  const m = s.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})/);
+  return m ? m[1] + m[2].padStart(2, "0") + m[3].padStart(2, "0") : "";
+};
+const isOut = s => /خروج/.test(s || "");
+const slash = d => d ? d.slice(0, 4) + "/" + d.slice(4, 6) + "/" + d.slice(6, 8) : "";
+function buildList(){
+  const days = Math.max(1, Math.min(365, Number(normDigits($("#days").value)) || 90));
+  const cut = jDate(new Date(Date.now() - days * 864e5)).replace(/\D/g, "");
+  const m = new Map();
+  const get = r => { if (!m.has(r)) m.set(r, {r, c:"", ch:new Set(), d:"", m:"", s:""}); return m.get(r); };
+  let orders = 0;
+  if (xReq) {
+    const h = xReq[0], I = k => h.indexOf(k);
+    const iD = I("OrderDate"), iS = I("OrderStatus"), iR = I("RequestCode"), iC = I("ChassissCode"), iCh = I("RequestChannel");
+    for (const row of xReq.slice(1)) {
+      // order codes like 1530601157P02 are the 2nd order of reception 1530601157
+      const r = normDigits(row[iR]).toUpperCase().replace(/[^0-9A-Z]/g, "").replace(/P\d+$/, ""), d = ymd(row[iD]);
+      if (!r || r === "0" || /ابطال/.test(row[iS] || "") || (d && d < cut)) continue;
+      const o = get(r); orders++;
+      const c = String(row[iC] || "").toUpperCase().replace(/\s+/g, "");
+      if (c && c !== "0" && !o.c) o.c = c;
+      if (row[iCh]) o.ch.add(chOf(row[iCh]));
+      if (d > o.d) o.d = d;
+    }
+  }
+  if (xRcp) {
+    const h = xRcp[0], I = k => h.indexOf(k);
+    // only reception, chassis, model, date, status and the VOR flag are read; customer names, phones and IDs never are
+    const iR = I("شماره پذیرش"), iC = I("شماره شاسی"), iM = I("مدل خودرو"), iD = I("تاریخ پذیرش"), iV = I("VOR"), iS = I("وضعیت پذیرش");
+    for (const row of xRcp.slice(1)) {
+      const r = normDigits(row[iR]).toUpperCase().replace(/[^0-9A-Z]/g, ""), d = ymd(row[iD]);
+      if (!r || (d && d < cut)) continue;
+      const o = get(r);
+      const c = String(row[iC] || "").toUpperCase().replace(/\s+/g, "");
+      if (c) o.c = c;
+      if (row[iM]) o.m = row[iM];
+      if (iS >= 0 && row[iS]) o.s = row[iS];
+      if (iV >= 0 && /^(دارد|بله|1|true)$/i.test(String(row[iV] || "").trim())) o.ch.add("VOR");
+      if (d > o.d) o.d = d;
+    }
+  }
+  // VOR list: which part of which reception is a VOR order, with its order number
+  const vorMap = new Map();
+  let vorN = 0;
+  if (xVor) for (const v of xVor) {
+    if (v.del || !v.r) continue;
+    const d = ymd(v.dt);
+    if (d && d < cut) continue;
+    const o = get(String(v.r)); o.ch.add("VOR"); vorN++;
+    if (v.c && v.c !== "0" && !o.c) o.c = v.c;
+    [pkey(v.p || v.t), lkey(v.p || v.t)].forEach(k => { if (!vorMap.has(v.r + "\u0001" + k)) vorMap.set(v.r + "\u0001" + k, v); });
+  }
+  // open requests from «تحویل قطعات پذیرش»: every reception on that page is open in the workshop
+  let need = null;
+  if (xNeed) {
+    (xNeed.recs || []).forEach(r => get(String(r)).op = 1);
+    const lines = xNeed.rows.filter(L => L && L.r && L.p).map(L => {
+      get(String(L.r)).op = 1;
+      const v = vorMap.get(L.r + "\u0001" + pkey(L.p)) || vorMap.get(L.r + "\u0001" + lkey(L.p));
+      return {r: String(L.r), p: pnorm(L.p), n: L.n || "", q: Number(L.q) || 0, s: Number(L.s) || 0, d: L.d || "", t: v ? "VOR" : "", o: v ? String(v.o || "") : ""};
+    });
+    need = {made: xNeed.made || "", madeTs: xNeed.madeTs || "", lines};
+  }
+  // receptions still in the workshop first, then newest first
+  const rows = Array.from(m.values()).map(o => Object.assign({r:o.r, c:o.c, ch:Array.from(o.ch), d:slash(o.d), m:o.m, s:o.s}, o.op ? {op:1} : {}))
+    .sort((a, b) => (isOut(a.s) - isOut(b.s)) || ((b.op || 0) - (a.op || 0)) || (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
+  const now = new Date();
+  listOut = {kind:"wsc-list", v:2, made: jDate(now) + " " + now.toTimeString().slice(0, 5), madeTs: now.toISOString(), days, rows};
+  if (need) listOut.need = need;
+  const byCh = {};
+  rows.forEach(x => x.ch.forEach(c => byCh[c] = (byCh[c] || 0) + 1));
+  const byS = {};
+  rows.forEach(x => { if (x.s) byS[x.s] = (byS[x.s] || 0) + 1; });
+  let needTxt = "";
+  if (need) {
+    const open = need.lines.filter(L => !L.d), short = open.filter(L => L.s < L.q);
+    const age = need.madeTs ? (Date.now() - Date.parse(need.madeTs)) / 36e5 : 0;
+    needTxt = "<br>درخواست‌های باز: " + (xNeed.recs || []).length + " پذیرش، " + open.length + " قلم تحویل‌نشده (" + short.length + " قلم منتظر رسیدن)" +
+      (xVor ? "، " + open.filter(L => L.t === "VOR").length + " قلم VOR" : "") + "؛ گرفته‌شده " + code(need.made) +
+      (age > 12 ? ' <span style="color:var(--err)">(' + Math.round(age) + " ساعت پیش؛ امروز دوباره دکمه خروجی انبار را بزنید)</span>" : "");
+  }
+  $("#listMsg").innerHTML = rows.length + " پذیرش" + (xReq ? " از " + orders + " سفارش " + days + " روز اخیر" : "") + (xRcp ? "، به‌علاوه فهرست پذیرش‌ها" : "") + (xVor ? "، " + vorN + " ردیف لیست VOR" : "") + ". " +
+    Object.keys(byCh).map(k => esc(k) + ": " + byCh[k]).join("، ") +
+    (Object.keys(byS).length ? "<br>" + Object.keys(byS).map(k => esc(k) + ": " + byS[k]).join("، ") : "") +
+    (rows.some(x => !x.c) ? "<br>" + rows.filter(x => !x.c).length + " پذیرش شاسی ندارد؛ با شماره پذیرش پیدا می‌شود، نه با شاسی." : "") + needTxt;
+  const slips = slipRows();
+  $("#listBtn").disabled = !rows.length; $("#slipBtn").disabled = !slips.length;
+  $("#slipBtn").textContent = xRcp || xNeed ? "چاپ بارکد پذیرش‌های داخل تعمیرگاه (" + slips.length + ")" : "چاپ بارکد پذیرش‌ها (" + slips.length + ")";
+  renderNeed();
+}
+// with a receptions export or the open-requests file: only cars still in the workshop need a slip on their job card
+function slipRows(){
+  if (!listOut) return [];
+  return xRcp || xNeed ? listOut.rows.filter(x => x.op || (xRcp && x.s && !isOut(x.s))) : listOut.rows;
+}
+// VOR list exported to Excel from the system: same columns as on screen
+function vorFromXlsx(rows){
+  const h = rows[0], I = k => h.indexOf(k);
+  const iT = I("کد فنی"), iN = I("شرح فنی"), iL = I("کد لجستیک"), iQ = I("تعداد"), iR = I("پذیرش"), iO = I("کد درخواست"), iF = I("شماره فاکتور"), iC = I("شاسی"), iX = I("حذف"), iDt = I("تاریخ ثبت");
+  const yes = v => /^(بله|دارد|true|1|yes)$/i.test(String(v || "").trim());
+  return rows.slice(1).map(r => ({r: normDigits(r[iR]).replace(/\D/g, ""), t: pnorm(r[iT]), p: iL >= 0 ? pnorm(r[iL]) : "", n: iN >= 0 ? r[iN] : "", q: Number(normDigits(r[iQ])) || 0,
+    o: iO >= 0 ? normDigits(r[iO]) : "", f: iF >= 0 ? normDigits(r[iF]) : "", c: iC >= 0 ? pnorm(r[iC]) : "", dt: iDt >= 0 ? normDigits(r[iDt]) : "", del: iX >= 0 && yes(r[iX]) ? 1 : 0}))
+    .filter(v => v.r && v.t);
+}
+async function loadX(list){
+  const res = [];
+  for (const f of list) {
+    try {
+      if (/\.json$/i.test(f.name)) {
+        const o = JSON.parse(await f.text());
+        if (o && o.kind === "wsc-need" && Array.isArray(o.rows)) {
+          xNeed = o;
+          res.push(esc(f.name) + ": " + (o.recs || []).length + " پذیرش باز، " + o.rows.length + " قلم درخواستی، گرفته‌شده " + code(o.made || "?") +
+            (o.failed && o.failed.length ? ' <span style="color:var(--err)">(' + o.failed.length + " پذیرش خوانده نشده بود؛ دکمه را دوباره بزنید)</span>" : ""));
+        } else if (o && o.kind === "wsc-vor" && Array.isArray(o.rows)) {
+          xVor = o.rows;
+          res.push(esc(f.name) + ": " + o.rows.length + " ردیف لیست VOR" + (o.paged ? ' <span style="color:var(--err)">(فقط صفحه اول جدول؛ بازه را کوتاه‌تر کنید)</span>' : ""));
+        } else if (o && o.kind === "wsc-list") res.push(esc(f.name) + ": این فایل فهرست گوشی‌هاست؛ خودِ خروجی‌های سیستم را بکشید");
+        else res.push(esc(f.name) + ": این فایل شناخته نشد");
+        continue;
+      }
+      const rows = await readXlsx(f);
+      const h = rows[0] || [];
+      if (h.includes("RequestCode") && h.includes("ChassissCode")) { xReq = rows; res.push(esc(f.name) + ": " + (rows.length - 1) + " سفارش"); }
+      else if (h.includes("کد فنی") && h.includes("کد درخواست") && h.includes("پذیرش")) { xVor = vorFromXlsx(rows); res.push(esc(f.name) + ": " + xVor.length + " ردیف لیست VOR"); }
+      else if (h.includes("شماره پذیرش")) {
+        xRcp = rows;
+        res.push(esc(f.name) + ": " + (rows.length - 1) + " پذیرش" + (rows.length < 2 ? ' <span style="color:var(--err)">(فایل خالی است؛ دوباره با فیلتر پذیرش‌های باز خروجی بگیرید)</span>' : ""));
+      }
+      else res.push(esc(f.name) + ": این گزارش شناخته نشد");
+    } catch(e) { res.push(esc(f.name) + ": خوانده نشد (" + esc(e.message || e) + ")"); }
+  }
+  say(res.join("<br>"), "ok");
+  buildList();
+}
+
+// ---------- Code 128 (set B) for reception slips ----------
+const C128 = ["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
+function code128svg(text, maxMm, hMm){
+  const vals = [104].concat(Array.from(text, ch => ch.charCodeAt(0) - 32));
+  let sum = vals[0]; for (let i = 1; i < vals.length; i++) sum += vals[i] * i;
+  vals.push(sum % 103, 106);
+  const widths = vals.map(v => C128[v]).join("");
+  const modules = Array.from(widths).reduce((a, w) => a + Number(w), 0) + 20;
+  const mod = Math.min(0.33, maxMm / modules);
+  let x = 10, bars = "";
+  Array.from(widths).forEach((w, i) => { const n = Number(w); if (i % 2 === 0) bars += '<rect x="' + x + '" y="0" width="' + n + '" height="1"/>'; x += n; });
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + (modules * mod).toFixed(2) + 'mm" height="' + hMm + 'mm" viewBox="0 0 ' + modules + ' 1" preserveAspectRatio="none" shape-rendering="crispEdges"><rect width="' + modules + '" height="1" fill="#fff"/><g fill="#000">' + bars + "</g></svg>";
+}
+function printSlips(){
+  if (!listOut) return;
+  const per = 24, rows = slipRows(), pages = [];
+  for (let i = 0; i < rows.length; i += per) pages.push(rows.slice(i, i + per));
+  $("#printArea").innerHTML = pages.map(pg => '<div class="sheet">' + pg.map(x =>
+    '<div class="slip"><b>پذیرش ' + code(x.r) + "</b>" + code128svg("R" + x.r, 62, 11) +
+    "<span>" + (x.c ? "شاسی " + code(x.c) : "") + "</span><span>" + [x.m, x.ch.join("، "), x.d].filter(Boolean).map(v => "<bdi>" + esc(v) + "</bdi>").join(" · ") + "</span></div>").join("") + "</div>").join("");
+  window.print();
+}
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2, "0"); return jDate(d).replace(/\//g, "") + "_" + p(d.getHours()) + p(d.getMinutes()); }
 
 // ---------- xlsx ----------
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -246,7 +734,7 @@ function sheetXml(sh){
   const cols = "<cols>" + sh.widths.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"' + (sh.hidden && sh.hidden.includes(i) ? ' hidden="1"' : "") + "/>").join("") + "</cols>";
   const fr = sh.freezeRows ? '<pane ySplit="' + sh.freezeRows + '" topLeftCell="A' + (sh.freezeRows + 1) + '" activePane="bottomLeft" state="frozen"/>' : "";
   const ncol = Math.max(...sh.rows.map(r => r.length));
-  const af = sh.filter ? '<autoFilter ref="A' + (sh.headerRow + 1) + ":" + col(ncol - 1) + sh.rows.length + '"/>' : "";
+  const af = sh.filter && sh.rows.length > 1 ? '<autoFilter ref="A' + (sh.headerRow + 1) + ":" + col(ncol - 1) + sh.rows.length + '"/>' : "";
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<sheetViews><sheetView rightToLeft="1" workbookViewId="0"' + (sh.active ? ' tabSelected="1"' : "") + ">" + fr + "</sheetView></sheetViews><sheetFormatPr defaultRowHeight=\"18\"/>" + cols + "<sheetData>" + rows + "</sheetData>" + af + "</worksheet>";
 }
@@ -266,52 +754,73 @@ function buildXlsx(){
   const recs = sorted();             // newest first
   const N = recs.length, last = N + 1;
   const DATA = "'همه ثبت‌ها'", SRCH = "'جست‌وجوی قطعه'";
+  const HELP = col(HEAD.length);     // hidden helper column after the data columns
   // 1. all scans, with a helper column counting matches of the searched part
   const allRows = [HEAD.concat(["شماره تطابق"])].concat(recs.map((r, i) => {
     const n = i + 2;
-    return [r.id, r.date, r.time, r.ts, r.user, r.device, r.mode, r.loc, r.toLoc, r.part, r.qty, r.note,
+    return [r.id, r.date, r.time, r.ts, r.user, r.device, r.mode, r.loc, r.toLoc, r.part, r.qty, r.note, r.doc, r.dtype, r.rec, r.chassis, r.ref, r.party, r.ch,
       {f: "IF(" + SRCH + "!$B$2=\"\",\"\",IF(J" + n + "=" + SRCH + "!$B$2,COUNTIF($J$2:J" + n + "," + SRCH + "!$B$2),\"\"))"}];
   }));
   // 2. part search: type a code in B2
   const R0 = 5, MAXR = 200;
   const srch = [
-    ["کد قطعه را در خانه زرد بنویسید", "", "", "", "", "", "", "", ""],
-    ["کد قطعه", "", "تعداد ثبت", {f: "IF($B$2=\"\",\"\",COUNTIF(" + DATA + "!$J$2:$J$" + last + ",$B$2))"}, "آخرین مکان", {f: "IF($K$5=\"\",\"\",IF(INDEX(" + DATA + "!$I$2:$I$" + last + ",$K$5)<>\"\",INDEX(" + DATA + "!$I$2:$I$" + last + ",$K$5),INDEX(" + DATA + "!$H$2:$H$" + last + ",$K$5)))"}, "", "", ""],
-    ["", "", "", "", "", "", "", "", ""],
-    ["ردیف", "تاریخ", "ساعت", "کارمند", "عملیات", "مکان", "مکان مقصد", "تعداد", "گوشی", "", "ردیف داده"]
+    ["کد قطعه را در خانه زرد بنویسید", "", "", "", "", "", "", "", "", "", "", ""],
+    ["کد قطعه", "", "تعداد ثبت", {f: "IF($B$2=\"\",\"\",COUNTIF(" + DATA + "!$J$2:$J$" + last + ",$B$2))"}, "آخرین مکان", {f: "IF($N$5=\"\",\"\",IF(INDEX(" + DATA + "!$I$2:$I$" + last + ",$N$5)<>\"\",INDEX(" + DATA + "!$I$2:$I$" + last + ",$N$5),INDEX(" + DATA + "!$H$2:$H$" + last + ",$N$5)&\"\"))"}, "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", "", "", "", ""],
+    ["ردیف", "تاریخ", "ساعت", "کارمند", "عملیات", "مکان", "مکان مقصد", "تعداد", "نوع سند", "پذیرش", "شاسی", "گوشی", "", "ردیف داده"]
   ];
   // text columns get &"" so an empty source cell shows empty, not 0
-  const pick = (c, n) => ({f: "IF($K" + n + "=\"\",\"\",INDEX(" + DATA + "!$" + c + "$2:$" + c + "$" + last + ",$K" + n + ")" + (c === "K" ? "" : "&\"\"") + ")"});
+  const pick = (c, n) => ({f: "IF($N" + n + "=\"\",\"\",INDEX(" + DATA + "!$" + c + "$2:$" + c + "$" + last + ",$N" + n + ")" + (c === "K" ? "" : "&\"\"") + ")"});
   for (let k = 0; k < MAXR; k++) {
     const n = R0 + k;
     srch.push([
       {f: "IF($B$2=\"\",\"\",IF(ROWS($A$" + R0 + ":A" + n + ")>COUNTIF(" + DATA + "!$J$2:$J$" + last + ",$B$2),\"\",ROWS($A$" + R0 + ":A" + n + ")))"},
-      pick("B", n), pick("C", n), pick("E", n), pick("G", n), pick("H", n), pick("I", n), pick("K", n), pick("F", n), "",
-      {f: "IF($A" + n + "=\"\",\"\",MATCH($A" + n + "," + DATA + "!$M$2:$M$" + last + ",0))"}
+      pick("B", n), pick("C", n), pick("E", n), pick("G", n), pick("H", n), pick("I", n), pick("K", n), pick("N", n), pick("O", n), pick("P", n), pick("F", n), "",
+      {f: "IF($A" + n + "=\"\",\"\",MATCH($A" + n + "," + DATA + "!$" + HELP + "$2:$" + HELP + "$" + last + ",0))"}
     ]);
   }
-  // 3. part summary
+  // 3. receptions: received vs delivered, per reception and part
+  const recSheet = [["پذیرش", "شاسی", "کد قطعه", "رسیده", "تحویل‌شده", "برگشت از تعمیرگاه", "مانده برای تحویل", "نوع رسید", "آخرین رسید"]]
+    .concat(waiting().map(o => [o.rec, o.chassis, o.part, o.rcv, o.iss, o.ret, o.left, o.types, o.last]));
+  // 4. documents
+  const docs = new Map();
+  recs.slice().reverse().forEach(r => {
+    if (!r.doc) return;
+    if (!docs.has(r.doc)) docs.set(r.doc, {id:r.doc, date:r.date, time:r.time, user:r.user, device:r.device, mode:r.mode, dtype:r.dtype, rec:r.rec, chassis:r.chassis, ref:r.ref, party:r.party, ch:r.ch, lines:0, qty:0});
+    const d = docs.get(r.doc); d.lines++; d.qty += r.qty;
+  });
+  const docSheet = [["شناسه سند", "تاریخ", "ساعت شروع", "کارمند", "گوشی", "عملیات", "نوع سند", "پذیرش", "شاسی", "کانال سفارش", "سند مرجع", "طرف", "تعداد قلم", "جمع تعداد"]]
+    .concat(Array.from(docs.values()).reverse().map(d => [d.id, d.date, d.time, d.user, d.device, d.mode, d.dtype, d.rec, d.chassis, d.ch, d.ref, d.party, d.lines, d.qty]));
+  // 5. part summary
   const byPart = new Map();
   recs.forEach(r => { if (!byPart.has(r.part)) byPart.set(r.part, []); byPart.get(r.part).push(r); });
-  const parts = [["کد قطعه", "تعداد ثبت", "آخرین مکان", "آخرین عملیات", "آخرین تاریخ", "آخرین ساعت", "آخرین کارمند", "جمع چیدن", "جمع برداشت", "آخرین شمارش", "مکان آخرین شمارش"]];
+  const parts = [["کد قطعه", "تعداد ثبت", "آخرین مکان", "آخرین عملیات", "آخرین تاریخ", "آخرین کارمند", "جمع رسید", "جمع چیدن", "جمع تحویل پذیرش", "جمع خروج", "جمع برگشت", "آخرین شمارش", "مکان آخرین شمارش"]];
   Array.from(byPart.keys()).sort().forEach(p => {
-    const m = byPart.get(p), l = m[0], lc = m.find(r => r.mode === "شمارش");
+    const m = byPart.get(p), l = m[0], lc = m.find(r => r.mode === M.count);
     const sum = mode => m.filter(r => r.mode === mode).reduce((a, r) => a + r.qty, 0);
-    parts.push([p, m.length, l.toLoc || l.loc, l.mode, l.date, l.time, l.user, sum("چیدن"), sum("برداشت"), lc ? lc.qty : "", lc ? lc.loc : ""]);
+    parts.push([p, m.length, l.toLoc || l.loc, l.mode, l.date, l.user, sum(M.rcv), sum(M.put), sum(M.iss), sum(M.out), sum(M.ret), lc ? lc.qty : "", lc ? lc.loc : ""]);
   });
-  // 4. staff per day
+  // 6. staff per day
   const byStaff = new Map();
   recs.forEach(r => { const k = r.user + "\u0001" + r.date; if (!byStaff.has(k)) byStaff.set(k, {user:r.user, date:r.date, n:0, q:0, dev:new Set()}); const o = byStaff.get(k); o.n++; o.q += r.qty; o.dev.add(r.device); });
   const staff = [["کارمند", "تاریخ", "تعداد ثبت", "جمع تعداد", "گوشی"]].concat(
     Array.from(byStaff.values()).sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : a.user.localeCompare(b.user)).map(o => [o.user, o.date, o.n, o.q, Array.from(o.dev).join("، ")]));
 
   const sheets = [
-    {name:"جست‌وجوی قطعه", rows:srch, widths:[8, 13, 10, 18, 13, 12, 12, 8, 8, 2, 10], hidden:[10], headerRow:3, freezeRows:4, active:true,
-      style:(ri, ci) => ri === 1 && ci === 1 ? 2 : (ri === 0 || (ri === 1 && (ci === 0 || ci === 2 || ci === 4))) ? 3 : (ri >= 4 && ci < 9 ? 4 : 0)},
-    {name:"خلاصه قطعه‌ها", rows:parts, widths:[18, 10, 12, 12, 12, 10, 18, 10, 10, 12, 16], headerRow:0, freezeRows:1, filter:true},
+    {name:"جست‌وجوی قطعه", rows:srch, widths:[8, 13, 10, 18, 13, 12, 12, 8, 14, 14, 20, 8, 2, 10], hidden:[13], headerRow:3, freezeRows:4, active:true,
+      style:(ri, ci) => ri === 1 && ci === 1 ? 2 : (ri === 0 || (ri === 1 && (ci === 0 || ci === 2 || ci === 4))) ? 3 : (ri >= 4 && ci < 12 ? 4 : 0)},
+    {name:"پذیرش‌ها", rows:recSheet, widths:[16, 22, 18, 9, 10, 12, 12, 18, 18], headerRow:0, freezeRows:1, filter:true},
+    {name:"اسناد", rows:docSheet, widths:[20, 12, 10, 18, 8, 14, 18, 16, 22, 12, 16, 18, 10, 10], headerRow:0, freezeRows:1, filter:true},
+    {name:"خلاصه قطعه‌ها", rows:parts, widths:[18, 10, 12, 14, 12, 18, 10, 10, 14, 10, 10, 12, 16], headerRow:0, freezeRows:1, filter:true},
     {name:"کارمندان", rows:staff, widths:[20, 12, 10, 10, 14], headerRow:0, freezeRows:1, filter:true},
-    {name:"همه ثبت‌ها", rows:allRows, widths:[20, 12, 10, 24, 18, 8, 10, 10, 10, 18, 8, 14, 10], hidden:[12], headerRow:0, freezeRows:1, filter:true}
+    {name:"همه ثبت‌ها", rows:allRows, widths:[20, 12, 10, 24, 18, 8, 14, 10, 10, 18, 8, 14, 20, 16, 14, 20, 14, 16, 12, 10], hidden:[HEAD.length], headerRow:0, freezeRows:1, filter:true}
   ];
+  // 7. open requests of the system against the scans (only when the open-requests file was loaded)
+  if (listOut && listOut.need) {
+    const nr = [["پذیرش", "شاسی", "کد قطعه", "عنوان قطعه", "درخواستی", "موجودی سیستم", "VOR / شماره سفارش", "رسید اسکن‌شده", "تحویل اسکن‌شده", "وضعیت"]]
+      .concat(needStatus().map(o => [o.r, o.c, o.p, o.n, o.q, o.s, o.vor, o.rcv, o.iss, o.st]));
+    sheets.splice(2, 0, {name:"درخواست‌های باز", rows:nr, widths:[16, 22, 22, 30, 10, 12, 18, 12, 12, 34], headerRow:0, freezeRows:1, filter:true});
+  }
   const files = [];
   files.push({name:"[Content_Types].xml", data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
     sheets.map((s, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join("") +
@@ -332,19 +841,29 @@ function download(blob, name){
 }
 
 // ---------- events ----------
-const drop = $("#drop");
-drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
-drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); loadFiles(Array.from(e.dataTransfer.files)); });
-$("#files").addEventListener("change", e => { loadFiles(Array.from(e.target.files)); e.target.value = ""; });
+function dropZone(el, input, fn){
+  el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("over"));
+  el.addEventListener("drop", e => { e.preventDefault(); el.classList.remove("over"); fn(Array.from(e.dataTransfer.files)); });
+  input.addEventListener("change", e => { fn(Array.from(e.target.files)); e.target.value = ""; });
+}
+dropZone($("#drop"), $("#files"), loadFiles);
+dropZone($("#dropX"), $("#xfiles"), loadX);
+$("#days").addEventListener("change", () => { if (xReq || xRcp || xNeed || xVor) buildList(); });
+// the bookmark: dragged to Chrome's bookmarks bar; clicking it here does nothing
+$("#bmLink").href = BOOKMARK;
+$("#bmLink").addEventListener("click", e => { e.preventDefault(); $("#bmMsg").textContent = "این دکمه را اینجا نزنید؛ با موس به نوار بوکمارک Chrome بکشید. بعد در سیستم مدیران روی آن بزنید."; });
+$("#bmCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(BOOKMARK); $("#bmMsg").textContent = "کد کپی شد. اگر کشیدن کار نکرد: در Chrome کلیدهای Ctrl+Shift+O، بعد سه‌نقطه بالا ← Add new bookmark، نام «خروجی انبار» و در خانه URL کد را بچسبانید."; }
+  catch(e) { $("#bmMsg").textContent = "کپی نشد. دکمه زرد را با موس به نوار بوکمارک بکشید."; }
+});
+$("#listBtn").addEventListener("click", () => { if (listOut) download(new Blob([JSON.stringify(listOut)], {type:"application/json"}), "anbar_list_" + stamp() + ".json"); });
+$("#slipBtn").addEventListener("click", printSlips);
 ["#fText", "#fFrom", "#fTo"].forEach(s => $(s).addEventListener("input", render));
 ["#fStaff", "#fMode"].forEach(s => $(s).addEventListener("change", render));
 $("#fClear").addEventListener("click", () => { ["#fText", "#fFrom", "#fTo"].forEach(s => $(s).value = ""); $("#fStaff").value = ""; $("#fMode").value = ""; render(); });
-$("#xlsxBtn").addEventListener("click", () => {
-  const d = new Date(), p = n => String(n).padStart(2, "0");
-  download(buildXlsx(), "Scan_Report_" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()) + ".xlsx");
-});
-window.__rep = {addFile, all: () => all, render};
+$("#xlsxBtn").addEventListener("click", () => download(buildXlsx(), "Scan_Report_" + stamp() + ".xlsx"));
+window.__rep = {addFile, all: () => all, render, readXlsx, loadX, list: () => listOut, buildXlsx, code128svg, waiting, needStatus, wscExport, bookmark: BOOKMARK, pkey, lkey};
 })();
 </script>
 </body>
