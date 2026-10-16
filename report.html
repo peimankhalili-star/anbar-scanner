@@ -45,6 +45,20 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
 .summary .pill small{display:block;color:var(--muted);font-size:12px}
 .help{color:var(--muted);font-size:14px;line-height:1.8}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sec-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sec-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:#FBFAF6}
+.sec-box h3{font-size:15px;margin:0 0 8px}
+.sec-box input[type=password],.sec-box input[type=number],.sec-box input[type=text]{border:1px solid var(--line);border-radius:10px;padding:9px;background:var(--card);width:100%;margin-bottom:8px}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ok-t{color:var(--ok);font-weight:700}.bad-t{color:var(--err);font-weight:700}.warn-t{color:#8A5A00;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips label{display:inline-flex;align-items:center;gap:3px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:#fff;cursor:pointer}
+.alert{border-radius:10px;padding:8px 12px;margin-bottom:6px;line-height:1.8}
+.alert.red{background:var(--err-bg);color:var(--err)}.alert.yellow{background:#FFF4CC;color:#6B4A00}.alert.info{background:#EEF1F4;color:var(--muted)}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn.danger{background:var(--err-bg);color:var(--err);border:1px solid #F2B8C0}
+tr.void td{text-decoration:line-through;color:var(--muted)}
+@media (max-width:800px){.sec-grid{grid-template-columns:1fr}}
 #printArea{display:none}
 [hidden]{display:none!important}
 @media (max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
@@ -80,7 +94,7 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
       <label class="drop" id="dropX">
         <b>خروجی‌های سیستم را اینجا بکشید</b>
         <span class="help">Excel گزارش وضعیت درخواست‌ها (RepSalesRequest) و فهرست پذیرش‌ها، و فایل‌های دکمه «خروجی انبار»: قطعه‌های منتظر پذیرش‌ها (anbar_need) و لیست VOR (anbar_vor). هر کدام که دارید.</span>
-        <input type="file" id="xfiles" accept=".xlsx,.json" multiple hidden>
+        <input type="file" id="xfiles" accept=".xlsx,.json,.txt" multiple hidden>
       </label>
       <div class="inline">
         <div><label for="days">سفارش‌های چند روز اخیر</label><input id="days" type="number" min="7" max="365" value="90" dir="ltr"></div>
@@ -90,8 +104,80 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
       <p class="help" id="listMsg"></p>
     </div>
   </div>
+  <div class="card" id="secCard">
+    <h2>۳. امنیت و دسترسی گوشی‌ها</h2>
+    <p class="help" id="secStatus"></p>
+    <!-- no manager key yet -->
+    <div class="sec-grid" id="secSetup" hidden>
+      <div class="sec-box">
+        <h3>ساخت کلید مدیر (یک بار)</h3>
+        <p class="help">یک رمز عبور طولانی (دست‌کم ۱۰ حرف) انتخاب کنید که فقط خودتان بدانید. بدون این رمز هیچ گوشی‌ای مجوز نمی‌گیرد و هیچ فهرستی امضا نمی‌شود. اگر فراموش شود، قابل بازیابی نیست.</p>
+        <input type="password" id="mkPass1" placeholder="رمز عبور مدیر" autocomplete="new-password">
+        <input type="password" id="mkPass2" placeholder="تکرار رمز عبور" autocomplete="new-password">
+        <button class="btn accent" id="mkBtn">ساخت کلید مدیر</button>
+      </div>
+      <div class="sec-box">
+        <h3>بازیابی از فایل پشتیبان</h3>
+        <p class="help">اگر قبلاً کلید ساخته‌اید (روی همین یا کامپیوتر دیگر)، فایل پشتیبان anbar_manager_backup را انتخاب کنید و رمز عبور مدیر را بزنید.</p>
+        <input type="file" id="rsFile" accept=".json">
+        <input type="password" id="rsPass" placeholder="رمز عبور مدیر" autocomplete="current-password">
+        <button class="btn" id="rsBtn">بازیابی</button>
+      </div>
+    </div>
+    <!-- key exists -->
+    <div id="secMain" hidden>
+      <div class="sec-grid">
+        <div class="sec-box">
+          <h3>کلید مدیر</h3>
+          <div id="mgrInfo" class="help"></div>
+          <div id="unlockBox"><input type="password" id="ulPass" placeholder="رمز عبور مدیر" autocomplete="current-password"><button class="btn accent" id="ulBtn">باز کردن قفل مدیر</button></div>
+          <div id="lockedBox" class="row2" hidden><span class="ok-t">قفل مدیر باز است.</span><button class="btn ghost small" id="lkBtn">قفل کردن</button></div>
+          <div class="row2" style="margin-top:8px"><button class="btn ghost small" id="mjsBtn">دانلود manager.js</button><button class="btn ghost small" id="bkBtn">دانلود فایل پشتیبان</button></div>
+        </div>
+        <div class="sec-box">
+          <h3>تنظیمات گوشی‌ها</h3>
+          <label class="help">اعتبار مجوز (روز؛ با هر فهرست روزانه تمدید می‌شود. کمتر = قطع سریع‌تر گوشی‌ای که فهرست را بارگذاری نکند)</label>
+          <input type="number" id="setDays" min="1" max="90" dir="ltr">
+          <label class="help">قفل خودکار بعد از بی‌کاری (دقیقه)</label>
+          <input type="number" id="setIdle" min="1" max="240" dir="ltr">
+          <label class="help">رمز مدیر روی گوشی‌ها (برای حذف، تعداد دستی، پذیرش خارج از فهرست، فراموشی رمز کارمند)</label>
+          <div class="row2"><input type="password" id="setPin1" placeholder="رمز ۴ تا ۸ رقمی" style="width:48%" inputmode="numeric"><input type="password" id="setPin2" placeholder="تکرار" style="width:48%" inputmode="numeric"></div>
+          <button class="btn" id="setBtn">ذخیره تنظیمات</button>
+          <p class="help" id="setInfo"></p>
+        </div>
+      </div>
+      <div class="sec-box" style="margin-top:14px" id="reqBox" hidden>
+        <h3>درخواست‌های مجوز</h3>
+        <div class="tablewrap" style="max-height:30vh"><table><thead><tr><th>کد گوشی</th><th>کارمند</th><th>اثر انگشت گوشی</th><th>زمان درخواست</th><th>حالت‌های مجاز</th><th></th></tr></thead><tbody id="reqRows"></tbody></table></div>
+      </div>
+      <div class="sec-box" style="margin-top:14px">
+        <h3>گوشی‌ها</h3>
+        <p class="help">درخواست مجوز هر گوشی (فایل anbar_enroll_….txt) را در کادر «۲» بکشید. برای قطع دسترسی، «قطع» را بزنید و فهرست تازه را برای گوشی‌ها بفرستید؛ گوشی قطع‌شده با بارگذاری آن فهرست، یا حداکثر با تمام شدن مجوزش، قفل می‌شود.</p>
+        <div class="tablewrap" style="max-height:40vh"><table><thead><tr><th>کد گوشی</th><th>کارمند</th><th>اثر انگشت</th><th>وضعیت</th><th>ثبت‌شده از</th><th>آخرین فایل</th><th>حالت‌های مجاز</th><th></th></tr></thead><tbody id="devRows"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="alertCard" hidden>
+    <h2>هشدارهای امنیتی</h2>
+    <div id="alertList"></div>
+    <details style="margin-top:8px"><summary class="help">وضعیت هر فایل</summary>
+      <div class="tablewrap" style="max-height:30vh"><table><thead><tr><th>فایل</th><th>گوشی</th><th>کارمند</th><th>امضا</th><th>ترتیب</th><th>ردیف</th></tr></thead><tbody id="fileRows"></tbody></table></div>
+    </details>
+  </div>
   <div class="msg" id="msg" hidden></div>
 
+  <div class="card" id="evCard" hidden>
+    <h2>رویدادهای گوشی‌ها</h2>
+    <div class="filters" style="grid-template-columns:1fr 1fr 2fr auto">
+      <div><label for="evDev">گوشی</label><select id="evDev"><option value="">همه</option></select></div>
+      <div><label for="evType">رویداد</label><select id="evType"><option value="">همه</option><option value="!">فقط موارد مهم</option></select></div>
+      <div><label for="evText">جست‌وجو</label><input id="evText" placeholder="کارمند، جزئیات"></div>
+      <div></div>
+    </div>
+    <p class="help" id="evHelp"></p>
+    <div class="tablewrap" style="max-height:45vh"><table><thead><tr><th>تاریخ</th><th>ساعت</th><th>گوشی</th><th>کارمند</th><th>رویداد</th><th>جزئیات</th></tr></thead><tbody id="evRows"></tbody></table></div>
+  </div>
   <div class="card" id="needCard" hidden>
     <h2>درخواست‌های باز پذیرش‌ها (از صفحه «تحویل قطعات پذیرش»)</h2>
     <p class="help" id="needHelp"></p>
@@ -170,6 +256,8 @@ th{background:#F1EEE7;font-size:13px;position:sticky;top:0}
 </main>
 <div id="printArea"></div>
 <script src="parts.js"></script>
+<script src="wsc-crypto.js"></script>
+<script src="manager.js"></script>
 <script>
 (function(){
 "use strict";
@@ -205,30 +293,166 @@ function parseCSV(text){
   if (f !== "" || row.length) { row.push(f); rows.push(row); }
   return rows.filter(r => r.some(x => x !== ""));
 }
+// v7 files: records and events in chain order (ترتیب، اثر قبلی، اثر) and a last «#WSC-SIG» line signed by the phone
+const H7 = ["نوع ردیف", "رویداد", "جزئیات رویداد", "ترتیب", "اثر قبلی", "اثر"];
+const MODE_CODE = Object.fromEntries(Object.entries(M).map(([k, v]) => [v, k]));
+let evAll = new Map(), filesV = [], alerts = [];
 function addFile(name, text){
   const rows = parseCSV(text);
   if (!rows.length) return {name, ok:false, why:"خالی است"};
-  const idx = HEAD.map(h => rows[0].indexOf(h));
+  const idx = HEAD.map(h => rows[0].indexOf(h)), ix7 = H7.map(h => rows[0].indexOf(h));
   if (idx[0] < 0 || idx[9] < 0 || idx[7] < 0) return {name, ok:false, why:"فایل اسکنر انبار نیست"};
+  if (filesV.some(f => f.name === name)) return {name, ok:true, added:0, dup:0};
   let added = 0, dup = 0;
+  const fv = {name, entries: [], meta: null, sig: null};
   for (const r of rows.slice(1)) {
+    if (r[0] === "#WSC-SIG") { try { fv.meta = JSON.parse(r[1]); fv.sig = r[2] || ""; } catch(e) { fv.metaBad = true; } continue; }
     const o = {};
     KEY.forEach((k, j) => o[k] = idx[j] >= 0 ? (r[idx[j]] || "") : "");
     if (!o.id) continue;
     o.qty = Number(o.qty) || 0;
+    const isEv = ix7[0] >= 0 && r[ix7[0]] === "رویداد";
+    const ent = {t: isEv ? "e" : "r", id: o.id, ts: o.ts, seq: ix7[3] >= 0 ? Number(r[ix7[3]]) || 0 : 0, prev: ix7[4] >= 0 ? r[ix7[4]] || "" : "", h: ix7[5] >= 0 ? r[ix7[5]] || "" : ""};
+    ent.d = isEv ? {id: o.id, user: o.user, device: o.device, type: r[ix7[1]] || "", info: r[ix7[2]] || ""}
+      : {id: o.id, user: o.user, device: o.device, mode: MODE_CODE[o.mode] || o.mode, loc: o.loc, toLoc: o.toLoc, part: o.part, qty: o.qty, note: o.note,
+         doc: o.doc, dtype: o.dtype, rec: o.rec, chassis: o.chassis, ref: o.ref, party: o.party, ch: o.ch};
+    fv.entries.push(ent);
+    if (isEv) { if (!evAll.has(o.id)) evAll.set(o.id, Object.assign({}, ent.d, {ts: o.ts, date: o.date, time: o.time, seq: ent.seq})); continue; }
     if (all.has(o.id)) { dup++; continue; }
     all.set(o.id, o); added++;
   }
+  filesV.push(fv);
   dupCount += dup; fileNames.add(name);
   return {name, ok:true, added, dup};
+}
+const EV_FA = {open: "باز شدن برنامه", unlock: "باز کردن قفل با رمز کارمند", lock: "قفل دستی", auto_lock: "قفل خودکار (بی‌کاری)", pin_fail: "رمز کارمند اشتباه",
+  pin_block: "۵ بار رمز اشتباه؛ قفل ۶۰ ثانیه", pin_reset: "رمز کارمند عوض شد (با رمز مدیر)", mgr_ok: "رمز مدیر زده شد", mgr_fail: "رمز مدیر اشتباه",
+  doc_open: "باز شدن سند", doc_close: "بسته شدن سند", void: "حذف یک ثبت", manual_qty: "تعداد دستی", rec_out: "پذیرش خارج از فهرست",
+  list_load: "بارگذاری فهرست", cert_load: "بارگذاری مجوز", list_reject: "فایل بدون امضای مدیر رد شد", export: "ارسال فایل", clear_sent: "پاک کردن ثبت‌های ارسال‌شده",
+  clock_back: "ساعت گوشی عقب کشیده شد", clock_reset: "تأیید ساعت گوشی با رمز مدیر", enroll: "درخواست مجوز", update: "نسخه برنامه عوض شد",
+  expired: "مجوز تمام شد؛ گوشی قفل شد", revoked: "دسترسی قطع شد؛ گوشی قفل شد", cert_bad: "مجوز نامعتبر", key_new: "کلید گوشی عوض شد (پاک شدن داده‌های برنامه)",
+  mgr_changed: "کلید مدیر روی سایت عوض شد", list_old: "فایل قدیمی‌تر مدیر (بخش امنیتی‌اش اعمال نشد)"};
+const EV_ALERT = new Set(["void", "clock_back", "clock_reset", "pin_block", "mgr_fail", "list_reject", "key_new", "mgr_changed", "cert_bad", "pin_reset"]);
+const EV_NOTE = new Set(["void", "clock_back", "clock_reset", "pin_block", "pin_fail", "mgr_fail", "list_reject", "list_old", "key_new", "mgr_changed", "cert_bad", "pin_reset",
+  "manual_qty", "rec_out", "revoked", "expired", "enroll", "update"]);
+// checks every file: the phone's signature, the manager's signature on its certificate, every record against its
+// hash and the one before it; then, per phone, missing or differing numbers across all files
+async function verifyAll(){
+  alerts = [];
+  const add = (level, text) => alerts.push({level, text});
+  const vp = verifyPub(), secured = !!(MGRK || SITE_MGR);
+  const byDev = new Map();
+  let regChanged = false;
+  for (const f of filesV) {
+    const ch = f.entries.filter(e => e.seq).sort((a, b) => a.seq - b.seq);
+    let hashBad = 0, linkBad = 0;
+    ch.forEach((e, i) => {
+      e.ok = WSC.sha256(WSC.canon({seq: e.seq, prev: e.prev, t: e.t, ts: e.ts, d: e.d})) === e.h;
+      if (!e.ok) hashBad++;
+      if (i > 0 && ch[i - 1].seq + 1 === e.seq && ch[i - 1].h !== e.prev) linkBad++;
+    });
+    f.dev = f.meta ? f.meta.dev : ((f.entries[0] || {}).d || {}).device || "";
+    f.user = f.meta ? f.meta.name : ((f.entries[0] || {}).d || {}).user || "";
+    f.range = ch.length ? ch[0].seq + "–" + ch[ch.length - 1].seq : "";
+    if (!f.meta) {
+      f.status = "none"; ch.forEach(e => e.v = "none");
+      if (secured) add("yellow", "فایل " + code(f.name) + " (" + esc(f.dev) + ") امضا ندارد؛ از نسخه قدیمی برنامه یا از گوشی‌ای است که امنیتش روشن نشده. ثبت‌های آن تأییدنشده‌اند.");
+      continue;
+    }
+    const m = f.meta;
+    f.fp = m.devPub ? WSC.fp(m.devPub) : "";
+    if (!m.cert) {
+      // sent from the enrollment screen, before the phone had a certificate (e.g. records left from version 6)
+      f.status = "nocert"; ch.forEach(e => e.v = "none");
+      add("yellow", "فایل " + code(f.name) + " را گوشی " + esc(f.dev) + " پیش از گرفتن مجوز فرستاده است؛ ثبت‌های آن تأییدنشده‌اند" + (hashBad || linkBad ? " و " + (hashBad + linkBad) + " ردیف آن با زنجیره‌اش جور نیست" : "") + ".");
+      continue;
+    }
+    const certOk = !!vp && !!m.cert && !!m.cert.body && m.cert.body.pub === m.devPub && await WSC.verifyObj(vp, m.cert);
+    const sigOk = !!m.devPub && await WSC.verify(m.devPub, f.sig, WSC.canon(m));
+    const metaOk = ch.length > 0 && ch.length === m.n && ch[0].seq === m.first && ch[ch.length - 1].seq === m.last && ch[0].prev === m.prev && ch[ch.length - 1].h === m.head;
+    f.status = certOk && sigOk && metaOk && !hashBad && !linkBad ? "ok" : "bad";
+    if (!sigOk) add("red", "امضای فایل " + code(f.name) + " (گوشی " + esc(f.dev) + ") درست نیست: فایل بعد از ساخته شدن تغییر کرده یا جعلی است.");
+    else if (!certOk) add("red", "مجوز گوشی " + esc(f.dev) + " در فایل " + code(f.name) + " را کلید مدیر امضا نکرده است: گوشی بدون مجوز شما کار کرده است.");
+    if (sigOk && (hashBad || linkBad || !metaOk)) add("red", "در فایل " + code(f.name) + " (گوشی " + esc(f.dev) + ") ردیف‌ها با زنجیره‌شان جور نیستند: " + (hashBad ? hashBad + " ردیف تغییر کرده؛ " : "") + (!metaOk || linkBad ? "ردیفی حذف یا اضافه شده." : ""));
+    ch.forEach(e => e.v = f.status === "ok" && e.ok ? "ok" : "bad");
+    const d = REG.devices[f.fp];
+    if (MGRK && certOk && !d) add("yellow", "گوشی " + esc(f.dev) + " (اثر انگشت " + code(f.fp) + ") در فهرست گوشی‌های این کامپیوتر نیست؛ اگر مجوزش را روی کامپیوتر دیگری صادر کرده‌اید، پشتیبان را بازیابی کنید.");
+    if (d && d.status !== "active" && d.revokedAt) {
+      const after = ch.filter(e => e.ts > d.revokedAt && !(e.t === "e" && ["revoked", "export", "open", "clear_sent"].includes(e.d.type)));
+      if (after.length) add("red", "گوشی " + esc(d.dev) + " (" + esc(d.name) + ") بعد از قطع دسترسی در " + esc(jDate(new Date(d.revokedAt))) + "، " + after.length + " ثبت دیگر فرستاده است.");
+    }
+    if (d && f.status === "ok" && (!d.lastFile || m.madeTs > d.lastFile)) { d.lastFile = m.madeTs; d.lastMade = m.made; regChanged = true; }
+    if (f.fp) {
+      if (!byDev.has(f.fp)) byDev.set(f.fp, {dev: f.dev, seqs: new Map()});
+      const B = byDev.get(f.fp);
+      for (const e of ch) {
+        const x = B.seqs.get(e.seq);
+        if (x && x.h !== e.h) add("red", "ثبت شماره " + e.seq + " گوشی " + esc(f.dev) + " در دو فایل فرق دارد (" + code(x.file) + " و " + code(f.name) + ").");
+        else if (!x) B.seqs.set(e.seq, {h: e.h, prev: e.prev, file: f.name, ts: e.ts});
+      }
+    }
+  }
+  for (const [fp, B] of byDev) {
+    const ss = Array.from(B.seqs.keys()).sort((a, b) => a - b);
+    // the phone's time should only move forward along its chain
+    let back = 0;
+    for (let i = 1; i < ss.length; i++) { const t0 = B.seqs.get(ss[i - 1]).ts, t1 = B.seqs.get(ss[i]).ts; if (t0 && t1 && Date.parse(t1) < Date.parse(t0) - 10 * 60000) back++; }
+    if (back) add("yellow", "در ثبت‌های گوشی " + esc(B.dev) + "، " + back + " بار زمان به عقب برگشته است: ساعت گوشی دستکاری شده یا اشتباه بوده است. تاریخ ثبت‌های بعد از آن قابل اعتماد نیست.");
+    for (let i = 1; i < ss.length; i++) {
+      if (ss[i] > ss[i - 1] + 1) add("yellow", "ثبت‌های شماره " + (ss[i - 1] + 1) + " تا " + (ss[i] - 1) + " گوشی " + esc(B.dev) + " نرسیده‌اند: یا هنوز فرستاده نشده‌اند، یا قبل از فرستادن پاک شده‌اند. اگر فایلش را دارید، اضافه کنید.");
+      else if (B.seqs.get(ss[i]).prev !== B.seqs.get(ss[i - 1]).h) add("red", "زنجیره ثبت‌های گوشی " + esc(B.dev) + " بین شماره " + ss[i - 1] + " و " + ss[i] + " پاره شده است.");
+    }
+  }
+  const rank = {ok: 2, none: 1, bad: 0}, best = new Map();
+  for (const f of filesV) for (const e of f.entries) { const v = e.seq ? (e.v || "bad") : "none"; const c = best.get(e.id); if (c === undefined || rank[v] > rank[c]) best.set(e.id, v); }
+  for (const r of all.values()) r.ver = best.get(r.id) || "none";
+  for (const e of evAll.values()) e.ver = best.get(e.id) || "none";
+  const vset = new Set(Array.from(evAll.values()).filter(e => e.type === "void").map(e => e.info));
+  for (const r of all.values()) r.void = vset.has(r.id);
+  // noteworthy events, per phone
+  const cnt = new Map();
+  for (const e of evAll.values()) if (EV_ALERT.has(e.type)) { const k = e.device + "\u0001" + e.user; if (!cnt.has(k)) cnt.set(k, {}); cnt.get(k)[e.type] = (cnt.get(k)[e.type] || 0) + 1; }
+  for (const [k, c] of cnt) {
+    const [dev, user] = k.split("\u0001");
+    add("yellow", "گوشی " + esc(dev) + " (" + esc(user) + "): " + Object.keys(c).map(t => c[t] + " بار «" + esc(EV_FA[t] || t) + "»").join("، ") + ". جزئیات در «رویدادهای گوشی‌ها».");
+  }
+  if (regChanged && mgrPriv) await regSave(); else if (regChanged) sv(K_REG, REG);
+  renderSec();
+}
+function renderAlerts(){
+  $("#alertCard").hidden = !filesV.length;
+  if (!filesV.length) return;
+  const order = {red: 0, yellow: 1, info: 2};
+  $("#alertList").innerHTML = alerts.slice().sort((a, b) => order[a.level] - order[b.level]).map(a => '<div class="alert ' + a.level + '">' + a.text + "</div>").join("") ||
+    '<div class="alert info">همه فایل‌ها سالم‌اند: امضای گوشی‌ها و مجوزها درست است و ثبتی جا نیفتاده است.</div>';
+  const st = {ok: '<span class="ok-t">سالم</span>', bad: '<span class="bad-t">دستکاری‌شده یا جعلی</span>', none: '<span class="warn-t">بدون امضا</span>', nocert: '<span class="warn-t">پیش از مجوز</span>'};
+  $("#fileRows").innerHTML = filesV.map(f => "<tr><td>" + code(f.name) + "</td><td>" + esc(f.dev || "") + "</td><td>" + esc(f.user || "") + "</td><td>" + (st[f.status] || "") + "</td><td>" + code(f.range || "") + "</td><td>" + f.entries.length + "</td></tr>").join("");
+}
+function evRowsFiltered(){
+  const dv = $("#evDev").value, ty = $("#evType").value, tx = normDigits($("#evText").value);
+  return Array.from(evAll.values()).filter(e => (!dv || e.device === dv) && (!ty || (ty === "!" ? EV_NOTE.has(e.type) : e.type === ty)) &&
+    (!tx || (e.user + " " + e.info + " " + (EV_FA[e.type] || e.type)).includes(tx))).sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0);
+}
+function renderEvents(){
+  $("#evCard").hidden = !evAll.size;
+  if (!evAll.size) return;
+  const keep = (sel, vals, extra) => { const cur = sel.value; sel.innerHTML = extra + vals.map(v => '<option value="' + esc(v[0]) + '">' + esc(v[1]) + "</option>").join(""); sel.value = cur; };
+  keep($("#evDev"), Array.from(new Set(Array.from(evAll.values()).map(e => e.device))).sort().map(d => [d, d]), '<option value="">همه</option>');
+  keep($("#evType"), Array.from(new Set(Array.from(evAll.values()).map(e => e.type))).sort().map(t => [t, EV_FA[t] || t]), '<option value="">همه</option><option value="!">فقط موارد مهم</option>');
+  const rows = evRowsFiltered();
+  $("#evHelp").textContent = rows.length + " رویداد از " + evAll.size + ".";
+  $("#evRows").innerHTML = rows.slice(0, 1500).map(e => "<tr><td>" + code(e.date) + "</td><td>" + code(e.time) + "</td><td>" + code(e.device) + "</td><td>" + esc(e.user) + "</td><td>" +
+    (EV_NOTE.has(e.type) ? "<b>" + esc(EV_FA[e.type] || e.type) + "</b>" : esc(EV_FA[e.type] || e.type)) + (e.ver === "bad" ? ' <span class="bad-t">⚠</span>' : "") + "</td><td>" + esc(e.info) + "</td></tr>").join("");
 }
 async function loadFiles(list){
   const res = [];
   for (const f of list) res.push(addFile(f.name, await f.text()));
   const bad = res.filter(r => !r.ok);
   const added = res.filter(r => r.ok).reduce((a, r) => a + r.added, 0);
+  await verifyAll();
+  const red = alerts.filter(a => a.level === "red").length;
   if (bad.length) say("این فایل‌ها خوانده نشدند: " + bad.map(b => esc(b.name) + " (" + b.why + ")").join("، "), "err");
-  else say(res.length + " فایل خوانده شد؛ " + added + " ثبت تازه اضافه شد.", "ok");
+  else say(res.length + " فایل خوانده شد؛ " + added + " ثبت تازه اضافه شد." + (red ? " " + red + " هشدار قرمز امنیتی؛ کادر «هشدارهای امنیتی» را ببینید." : ""), red ? "err" : "ok");
   refreshOptions(); render();
 }
 
@@ -236,7 +460,7 @@ async function loadFiles(list){
 function waiting(){
   const m = new Map();
   for (const r of all.values()) {
-    if (!r.rec || (r.mode !== M.rcv && r.mode !== M.iss && r.mode !== M.ret)) continue;
+    if (r.void || !r.rec || (r.mode !== M.rcv && r.mode !== M.iss && r.mode !== M.ret)) continue;
     const k = r.rec + "\u0001" + r.part;
     if (!m.has(k)) m.set(k, {rec:r.rec, chassis:"", part:r.part, rcv:0, iss:0, ret:0, types:new Set(), last:""});
     const o = m.get(k);
@@ -254,7 +478,7 @@ function needStatus(){
   if (!listOut || !listOut.need) return [];
   const sc = new Map();
   for (const r of all.values()) {
-    if (!r.rec || (r.mode !== M.rcv && r.mode !== M.iss)) continue;
+    if (r.void || !r.rec || (r.mode !== M.rcv && r.mode !== M.iss)) continue;
     const k = r.rec + "\u0001" + pkey(r.part);
     if (!sc.has(k)) sc.set(k, {rcv:0, iss:0});
     sc.get(k)[r.mode === M.rcv ? "rcv" : "iss"] += r.qty;
@@ -330,7 +554,7 @@ function render(){
   $("#waitHelp").textContent = w.length + " ردیف. یعنی قطعه برای این پذیرش رسید خورده ولی اسکن تحویل به تعمیرگاه ندارد؛ یا هنوز در HLD است، یا بدون اسکن تحویل شده.";
   $("#waitRows").innerHTML = w.map(o => "<tr><td>" + code(o.rec) + "</td><td>" + (o.chassis ? code(o.chassis) : "") + "</td><td>" + code(o.part) + "</td><td>" + o.rcv + "</td><td>" + o.iss +
     "</td><td><b>" + o.left + "</b></td><td>" + esc(o.types) + "</td><td>" + code(o.last) + "</td></tr>").join("");
-  renderNeed();
+  renderNeed(); renderAlerts(); renderEvents();
   if (!any) return;
   $("#stFiles").textContent = fileNames.size;
   $("#stRows").textContent = recs.length;
@@ -344,7 +568,8 @@ function render(){
   const LIMIT = 1000;
   $("#shown").textContent = rows.length + " ثبت" + (rows.length > LIMIT ? "؛ " + LIMIT + " ثبت آخر نشان داده شده. همه در فایل Excel هست." : "");
   const c = v => v ? code(v) : "";
-  $("#rows").innerHTML = rows.slice(0, LIMIT).map(r => "<tr><td>" + code(r.date) + "</td><td>" + code(r.time) + "</td><td>" + esc(r.user) + "</td><td>" + esc(r.mode) +
+  const vmark = r => r.ver === "bad" ? ' <span class="bad-t" title="امضا یا زنجیره درست نیست">⚠</span>' : r.ver === "none" && (MGRK || SITE_MGR) ? ' <span class="warn-t" title="بدون امضا">؟</span>' : "";
+  $("#rows").innerHTML = rows.slice(0, LIMIT).map(r => "<tr" + (r.void ? ' class="void" title="حذف‌شده با رمز مدیر"' : "") + "><td>" + vmark(r) + code(r.date) + "</td><td>" + code(r.time) + "</td><td>" + esc(r.user) + "</td><td>" + esc(r.mode) +
     "</td><td>" + esc(r.dtype) + "</td><td>" + c(r.rec) + "</td><td>" + c(r.chassis) + "</td><td>" + c(r.loc) + "</td><td>" + c(r.toLoc) + "</td><td>" + code(r.part) + "</td><td>" + esc(pinfo(r.part).name) + "</td><td>" + r.qty +
     "</td><td>" + c(r.ref) + "</td><td>" + c(r.doc) + "</td></tr>").join("");
 }
@@ -539,6 +764,183 @@ const pkey = s => pnorm(s).replace(/-\d{2,3}$/, "");
 // a trailing variant segment such as -GB1, -IUN or -SN is ignored for a "similar code" match
 const lkey = s => { const k = pkey(s), m = k.match(/^(.+-[A-Z0-9]+)-([A-Z0-9]{1,4})$/); return m && /[A-Z]/.test(m[2]) ? m[1] : k; };
 
+// ---------- security (v7): manager key, phones, signed lists ----------
+// The manager's private key lives in this browser only as an encrypted package (opened with the manager password
+// for 20 minutes at a time) and in the backup file. Phones trust only the public half, published as manager.js.
+const K_MGR = "wsc.mgr.v1", K_REG = "wsc.reg.v1";
+const ld = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e) { return d; } };
+const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { return false; } };
+let MGRK = ld(K_MGR, null);
+let REG = ld(K_REG, null) || {devices: {}, settings: {certDays: 7, idleMin: 30, mgrPin: null}, log: []};
+let mgrPriv = null, mgrTimer = null, regTampered = false, pendingReq = [];
+const SITE_MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
+const MODE_LIST = [["rcv", "رسید"], ["put", "چیدن"], ["iss", "تحویل پذیرش"], ["out", "خروج"], ["ret", "برگشت"], ["move", "جابه‌جایی"], ["count", "شمارش"]];
+const ST_FA = {active: "فعال", revoked: "قطع‌شده", replaced: "جایگزین‌شده"};
+function nowMade(){ const d = new Date(); return jDate(d) + " " + d.toTimeString().slice(0, 5); }
+function verifyPub(){ return MGRK ? MGRK.pub : SITE_MGR ? SITE_MGR.pub : null; }
+function secMsg(t, kind){ say(t, kind); $("#msg").scrollIntoView({block: "nearest"}); }
+function needMgr(){ if (mgrPriv) return true; secMsg("برای این کار، اول در کادر «امنیت» قفل مدیر را با رمز عبور مدیر باز کنید.", "err"); $("#ulPass") && $("#ulPass").focus(); return false; }
+function armTimer(){ clearTimeout(mgrTimer); mgrTimer = setTimeout(() => { mgrPriv = null; renderSec(); }, 20 * 60000); }
+// the phone registry is signed by the manager key, so a change made outside this page shows up
+async function regSave(){
+  if (mgrPriv) { const body = Object.assign({}, REG); delete body.sig; REG.sig = await WSC.sign(mgrPriv, WSC.canon(body)); }
+  sv(K_REG, REG);
+}
+async function regCheck(){
+  regTampered = false;
+  if (!MGRK) return;
+  const body = Object.assign({}, REG); delete body.sig;
+  const hasDevs = Object.keys(REG.devices || {}).length > 0;
+  if ((REG.sig || hasDevs) && !(await WSC.verify(MGRK.pub, REG.sig || "", WSC.canon(body)))) regTampered = true;
+}
+async function regLog(act, info){ REG.log.push({ts: new Date().toISOString(), act, info: info || ""}); if (REG.log.length > 1000) REG.log = REG.log.slice(-1000); await regSave(); }
+function managerJs(){
+  return "// Manager public key for the warehouse scanner. Upload this file to the site next to index.html.\n" +
+    "// Phones accept only certificates and lists signed by the private half, which never leaves the manager's computer.\n" +
+    "const WS_MANAGER = " + JSON.stringify({v: 1, pub: MGRK.pub, fp: MGRK.fp, made: MGRK.made}) + ";\n";
+}
+function downloadMgrJs(){ download(new Blob([managerJs()], {type: "text/javascript"}), "manager.js"); }
+function downloadBackup(){
+  download(new Blob([JSON.stringify({kind: "wsc-mgr-backup", v: 1, made: nowMade(), mgr: MGRK, reg: REG})], {type: "application/json"}), "anbar_manager_backup_" + stamp() + ".json");
+}
+async function mgrCreate(){
+  const p1 = $("#mkPass1").value, p2 = $("#mkPass2").value;
+  if (p1.length < 10) { secMsg("رمز عبور مدیر باید دست‌کم ۱۰ حرف باشد.", "err"); return; }
+  if (p1 !== p2) { secMsg("رمز عبور و تکرارش یکی نیستند.", "err"); return; }
+  secMsg("در حال ساخت کلید…", "ok");
+  const pair = await WSC.genKey(true), pub = await WSC.exportPub(pair);
+  MGRK = {v: 1, pub, fp: WSC.fp(pub), sealed: await WSC.sealPriv(pair.privateKey, p1), made: nowMade()};
+  sv(K_MGR, MGRK);
+  mgrPriv = await WSC.openPriv(MGRK.sealed, p1); armTimer();
+  $("#mkPass1").value = ""; $("#mkPass2").value = "";
+  await regLog("mgr_create", MGRK.fp);
+  downloadBackup(); downloadMgrJs(); renderSec();
+  secMsg("کلید مدیر ساخته شد (اثر انگشت " + code(MGRK.fp) + "). دو فایل دانلود شد: فایل پشتیبان را جای امنی نگه دارید (فلش یا ایمیل خودتان)، و manager.js را در GitHub کنار index.html بگذارید.", "ok");
+}
+async function mgrRestore(){
+  const f = $("#rsFile").files[0];
+  if (!f) { secMsg("فایل پشتیبان را انتخاب کنید.", "err"); return; }
+  let o; try { o = JSON.parse(await f.text()); } catch(e) { o = null; }
+  if (!o || o.kind !== "wsc-mgr-backup" || !o.mgr || !o.mgr.sealed) { secMsg("این فایل، فایل پشتیبان کلید مدیر نیست.", "err"); return; }
+  try { mgrPriv = await WSC.openPriv(o.mgr.sealed, $("#rsPass").value); } catch(e) { secMsg("رمز عبور مدیر اشتباه است.", "err"); return; }
+  $("#rsPass").value = "";
+  MGRK = o.mgr; sv(K_MGR, MGRK);
+  if (o.reg && o.reg.devices) REG = o.reg;
+  armTimer(); await regLog("mgr_restore", MGRK.fp); await regCheck(); renderSec();
+  secMsg("کلید مدیر بازیابی شد (اثر انگشت " + code(MGRK.fp) + ").", "ok");
+}
+async function mgrUnlock(){
+  try { mgrPriv = await WSC.openPriv(MGRK.sealed, $("#ulPass").value); }
+  catch(e) { mgrPriv = null; $("#ulPass").value = ""; secMsg("رمز عبور مدیر اشتباه است.", "err"); return; }
+  $("#ulPass").value = ""; armTimer();
+  if (regTampered) { secMsg("هشدار: فهرست گوشی‌ها روی این کامپیوتر بیرون از این صفحه تغییر کرده است. وضعیت گوشی‌ها را نگاه کنید؛ با اولین ذخیره دوباره امضا می‌شود.", "err"); }
+  renderSec();
+}
+async function setSave(){
+  if (!needMgr()) return;
+  const days = Math.min(90, Math.max(1, Math.floor(Number(normDigits($("#setDays").value))) || 7));
+  const idle = Math.min(240, Math.max(1, Math.floor(Number(normDigits($("#setIdle").value))) || 30));
+  const p1 = normDigits($("#setPin1").value).replace(/\D/g, ""), p2 = normDigits($("#setPin2").value).replace(/\D/g, "");
+  if (p1 || p2) {
+    if (p1.length < 4 || p1.length > 8) { secMsg("رمز مدیر گوشی‌ها باید ۴ تا ۸ رقم باشد.", "err"); return; }
+    if (p1 !== p2) { secMsg("رمز و تکرارش یکی نیستند.", "err"); return; }
+    REG.settings.mgrPin = await WSC.pinHash(p1);
+    await regLog("mgr_pin_set", "");
+  }
+  REG.settings.certDays = days; REG.settings.idleMin = idle;
+  $("#setPin1").value = ""; $("#setPin2").value = "";
+  await regLog("settings", "مجوز " + days + " روز، قفل " + idle + " دقیقه");
+  renderSec(); secMsg("تنظیمات ذخیره شد. با فهرست بعدی به گوشی‌ها می‌رسد.", "ok");
+}
+async function certFor(d){
+  const now = new Date(), exp = new Date(now.getTime() + REG.settings.certDays * 864e5);
+  d.certExp = exp.toISOString();
+  return WSC.signObj(mgrPriv, {kind: "wsc-cert", v: 1, dev: d.dev, name: d.name, pub: d.pub, fp: d.fp, modes: d.modes, iat: now.toISOString(), exp: exp.toISOString(), mgr: MGRK.fp});
+}
+// what every signed list or certificate file carries: fresh certificates, the cut-off phones, the PIN policy
+async function secPack(onlyFp){
+  const certs = [];
+  for (const d of Object.values(REG.devices)) if (d.status === "active" && (!onlyFp || d.fp === onlyFp)) certs.push(await certFor(d));
+  await regSave();
+  return {iat: new Date().toISOString(), mgr: MGRK.fp, certs, revoked: Object.values(REG.devices).filter(d => d.status !== "active").map(d => d.fp),
+    mgrPin: REG.settings.mgrPin, idleMin: REG.settings.idleMin};
+}
+async function signPkg(o){ const body = Object.assign({}, o); delete body.sig; o.sig = await WSC.sign(mgrPriv, WSC.canon(body)); return o; }
+async function certFile(fp){
+  if (!needMgr()) return;
+  const d = REG.devices[fp]; if (!d || d.status !== "active") return;
+  const o = await signPkg({kind: "wsc-cert", v: 1, made: nowMade(), sec: await secPack(fp)});
+  download(new Blob([JSON.stringify(o)], {type: "application/json"}), "anbar_cert_" + d.dev + "_" + stamp() + ".json");
+  await regLog("cert_file", d.dev + " " + fp); renderSec();
+}
+async function addEnrollReq(o, fileName){
+  const b = o && o.body;
+  if (!b || b.kind !== "wsc-enroll" || !b.pub) return fileName + ": درخواست مجوز خوانده نشد";
+  if (!(await WSC.verifyObj(b.pub, o)) || WSC.fp(b.pub) !== b.fp) return '<span style="color:var(--err)">' + esc(fileName) + ": درخواست مجوز دستکاری شده است؛ رد شد</span>";
+  const d = REG.devices[b.fp];
+  if (d && d.status === "active") return esc(fileName) + ": این گوشی (" + esc(b.dev) + ") از قبل مجوز دارد";
+  pendingReq = pendingReq.filter(x => x.body.fp !== b.fp).concat([o]);
+  renderSec();
+  return esc(fileName) + ": درخواست مجوز گوشی " + code(b.dev) + " برای " + esc(b.name) + " (اثر انگشت " + code(b.fp) + "). در کادر «امنیت» تأیید یا رد کنید.";
+}
+function modesFrom(row){ return Array.from(row.querySelectorAll("input[data-m]:checked")).map(x => x.dataset.m); }
+function modeChips(sel, dis){
+  return '<div class="chips">' + MODE_LIST.map(([k, t]) => '<label><input type="checkbox" data-m="' + k + '"' + (sel.includes(k) ? " checked" : "") + (dis ? " disabled" : "") + ">" + t + "</label>").join("") + "</div>";
+}
+async function approve(fp, row){
+  if (!needMgr()) return;
+  const q = pendingReq.find(x => x.body.fp === fp); if (!q) return;
+  const modes = modesFrom(row);
+  if (!modes.length) { secMsg("دست‌کم یک حالت کار را برای این گوشی تیک بزنید.", "err"); return; }
+  const now = new Date().toISOString();
+  for (const d of Object.values(REG.devices)) if (d.dev === q.body.dev && d.fp !== fp && d.status === "active") { d.status = "replaced"; d.revokedAt = now; await regLog("replace", d.dev + " " + d.fp); }
+  REG.devices[fp] = {dev: q.body.dev, name: q.body.name, pub: q.body.pub, fp, status: "active", enrolledAt: now, enrolledMade: nowMade(), modes, reqMade: q.body.made};
+  pendingReq = pendingReq.filter(x => x.body.fp !== fp);
+  await regLog("approve", q.body.dev + " " + q.body.name + " " + fp);
+  await certFile(fp);
+  secMsg("مجوز گوشی " + code(q.body.dev) + " صادر شد و فایل مجوز دانلود شد. آن را با بله یا تلگرام برای همان گوشی بفرستید تا در صفحه ثبت گوشی بارگذاری شود.", "ok");
+}
+async function devAction(fp, act, row){
+  if (!needMgr()) return;
+  const d = REG.devices[fp]; if (!d) return;
+  if (act === "revoke") { d.status = "revoked"; d.revokedAt = new Date().toISOString(); await regLog("revoke", d.dev + " " + d.name + " " + fp); secMsg("دسترسی گوشی " + code(d.dev) + " قطع شد. فهرست تازه را برای همه گوشی‌ها بفرستید؛ این گوشی با بارگذاری آن، یا حداکثر با تمام شدن مجوزش، قفل می‌شود.", "ok"); }
+  else if (act === "restore") {
+    if (Object.values(REG.devices).some(x => x.dev === d.dev && x.fp !== fp && x.status === "active")) { secMsg("کد گوشی " + code(d.dev) + " الان روی گوشی دیگری فعال است.", "err"); return; }
+    d.status = "active"; d.revokedAt = null; await regLog("restore", d.dev + " " + fp); secMsg("گوشی " + code(d.dev) + " دوباره فعال شد؛ با فهرست بعدی مجوز تازه می‌گیرد.", "ok");
+  }
+  else if (act === "modes") { const m = modesFrom(row); if (!m.length) { secMsg("دست‌کم یک حالت کار لازم است.", "err"); renderSec(); return; } d.modes = m; await regLog("modes", d.dev + " " + m.join(",")); secMsg("حالت‌های کار " + code(d.dev) + " ذخیره شد؛ با فهرست بعدی به گوشی می‌رسد.", "ok"); }
+  else if (act === "cert") { await certFile(fp); return; }
+  await regSave(); renderSec();
+}
+function renderSec(){
+  $("#secSetup").hidden = !!MGRK; $("#secMain").hidden = !MGRK;
+  if (!MGRK) {
+    $("#secStatus").innerHTML = '<span class="warn-t">امنیت خاموش است.</span> تا کلید مدیر ساخته نشود و manager.js روی سایت نرود، گوشی‌ها مثل نسخه ۶ بدون مجوز کار می‌کنند.' +
+      (SITE_MGR ? '<br><span class="bad-t">روی سایت manager.js با کلید ' + code(SITE_MGR.fp) + " هست، ولی کلیدش روی این کامپیوتر نیست. از فایل پشتیبان بازیابی کنید.</span>" : "");
+    return;
+  }
+  const site = !SITE_MGR ? '<span class="warn-t">manager.js هنوز روی سایت نیست؛ تا آن را در GitHub نگذارید، امنیت گوشی‌ها روشن نمی‌شود.</span>'
+    : SITE_MGR.pub === MGRK.pub ? '<span class="ok-t">manager.js روی سایت با همین کلید یکی است.</span>'
+    : '<span class="bad-t">manager.js روی سایت کلید دیگری دارد (' + code(SITE_MGR.fp) + "). گوشی‌ها فقط آن کلید را قبول می‌کنند.</span>";
+  const devs = Object.values(REG.devices);
+  $("#secStatus").innerHTML = "امنیت: " + (SITE_MGR && SITE_MGR.pub === MGRK.pub ? '<span class="ok-t">روشن</span>' : '<span class="warn-t">نیمه‌کاره</span>') + " · " +
+    devs.filter(d => d.status === "active").length + " گوشی فعال، " + devs.filter(d => d.status !== "active").length + " قطع‌شده" +
+    (regTampered ? '<br><span class="bad-t">هشدار: فهرست گوشی‌ها روی این کامپیوتر بیرون از این صفحه تغییر کرده است.</span>' : "");
+  $("#mgrInfo").innerHTML = "اثر انگشت کلید مدیر: " + code(MGRK.fp) + " · ساخته‌شده " + code(MGRK.made) + "<br>" + site;
+  $("#unlockBox").hidden = !!mgrPriv; $("#lockedBox").hidden = !mgrPriv;
+  if (document.activeElement !== $("#setDays")) $("#setDays").value = REG.settings.certDays;
+  if (document.activeElement !== $("#setIdle")) $("#setIdle").value = REG.settings.idleMin;
+  $("#setInfo").innerHTML = "رمز مدیر گوشی‌ها: " + (REG.settings.mgrPin ? '<span class="ok-t">تعیین شده</span>' : '<span class="bad-t">تعیین نشده؛ قبل از اولین فهرست امضاشده تعیین کنید</span>');
+  $("#reqBox").hidden = !pendingReq.length;
+  $("#reqRows").innerHTML = pendingReq.map(q => '<tr data-fp="' + esc(q.body.fp) + '"><td>' + code(q.body.dev) + "</td><td>" + esc(q.body.name) + "</td><td>" + code(q.body.fp) + "</td><td>" + code(q.body.made) +
+    "</td><td>" + modeChips(MODE_LIST.map(x => x[0]), false) + '</td><td><button class="btn accent small" data-act="approve">تأیید و صدور مجوز</button> <button class="btn ghost small" data-act="reject">رد</button></td></tr>').join("");
+  $("#devRows").innerHTML = devs.sort((a, b) => (a.status !== "active") - (b.status !== "active") || (a.dev < b.dev ? -1 : 1)).map(d => '<tr data-fp="' + esc(d.fp) + '"><td>' + code(d.dev) + "</td><td>" + esc(d.name) + "</td><td>" + code(d.fp) +
+    "</td><td>" + (d.status === "active" ? '<span class="ok-t">فعال</span>' + (d.certExp ? "<br><small>مجوز تا " + esc(jDate(new Date(d.certExp))) + "</small>" : "") : '<span class="bad-t">' + ST_FA[d.status] + "</span><br><small>" + esc(d.revokedAt ? jDate(new Date(d.revokedAt)) : "") + "</small>") +
+    "</td><td>" + code(d.enrolledMade || "") + "</td><td>" + (d.lastMade ? code(d.lastMade) : "—") + "</td><td>" + modeChips(d.modes || [], d.status !== "active") + "</td><td>" +
+    (d.status === "active" ? '<button class="btn ghost small" data-act="cert">فایل مجوز</button> <button class="btn danger small" data-act="revoke">قطع دسترسی</button>' : '<button class="btn ghost small" data-act="restore">وصل دوباره</button>') + "</td></tr>").join("") ||
+    '<tr><td colspan="8" class="help">هنوز گوشی‌ای مجوز نگرفته است.</td></tr>';
+}
+
 // ---------- receptions list for the phones ----------
 let xReq = null, xRcp = null, xNeed = null, xVor = null, listOut = null;
 const chOf = s => /VIS/i.test(s) ? "VIS" : /VOR/i.test(s) ? "VOR" : s;
@@ -654,8 +1056,10 @@ async function loadX(list){
   const res = [];
   for (const f of list) {
     try {
-      if (/\.json$/i.test(f.name)) {
+      if (/\.(json|txt)$/i.test(f.name)) {
         const o = JSON.parse(await f.text());
+        if (o && o.body && o.body.kind === "wsc-enroll") { res.push(await addEnrollReq(o, f.name)); continue; }
+        if (o && (o.kind === "wsc-cert" || o.kind === "wsc-mgr-backup")) { res.push(esc(f.name) + ": این فایل برای گوشی یا بازیابی کلید است، نه برای این کادر"); continue; }
         if (o && o.kind === "wsc-need" && Array.isArray(o.rows)) {
           xNeed = o;
           res.push(esc(f.name) + ": " + (o.recs || []).length + " پذیرش باز، " + o.rows.length + " قلم درخواستی، گرفته‌شده " + code(o.made || "?") +
@@ -769,10 +1173,10 @@ function buildXlsx(){
   const DATA = "'همه ثبت‌ها'", SRCH = "'جست‌وجوی قطعه'";
   const HELP = col(HEAD.length);     // hidden helper column after the data columns
   // 1. all scans, with a helper column counting matches of the searched part
-  const allRows = [HEAD.concat(["شماره تطابق", "نام قطعه", "خودروها"])].concat(recs.map((r, i) => {
+  const allRows = [HEAD.concat(["شماره تطابق", "نام قطعه", "خودروها", "امضا", "حذف‌شده"])].concat(recs.map((r, i) => {
     const n = i + 2, pi = pinfo(r.part);
     return [r.id, r.date, r.time, r.ts, r.user, r.device, r.mode, r.loc, r.toLoc, r.part, r.qty, r.note, r.doc, r.dtype, r.rec, r.chassis, r.ref, r.party, r.ch,
-      {f: "IF(" + SRCH + "!$B$2=\"\",\"\",IF(J" + n + "=" + SRCH + "!$B$2,COUNTIF($J$2:J" + n + "," + SRCH + "!$B$2),\"\"))"}, pi.name, pi.cars];
+      {f: "IF(" + SRCH + "!$B$2=\"\",\"\",IF(J" + n + "=" + SRCH + "!$B$2,COUNTIF($J$2:J" + n + "," + SRCH + "!$B$2),\"\"))"}, pi.name, pi.cars, {ok: "سالم", bad: "دستکاری‌شده", none: "بدون امضا"}[r.ver || "none"], r.void ? "حذف‌شده" : ""];
   }));
   // 2. part search: type a code in B2
   const R0 = 5, MAXR = 200;
@@ -829,7 +1233,21 @@ function buildXlsx(){
     {name:"کارمندان", rows:staff, widths:[20, 12, 10, 10, 14], headerRow:0, freezeRows:1, filter:true},
     {name:"همه ثبت‌ها", rows:allRows, widths:[20, 12, 10, 24, 18, 8, 14, 10, 10, 18, 8, 14, 20, 16, 14, 20, 14, 16, 12, 10], hidden:[HEAD.length], headerRow:0, freezeRows:1, filter:true}
   ];
-  sheets[sheets.length - 1].widths.push(30, 40);
+  sheets[sheets.length - 1].widths.push(30, 40, 14, 10);
+  // events of the phones, and what the verification found
+  if (evAll.size) {
+    const ev = [["تاریخ", "ساعت", "زمان (ISO)", "گوشی", "کارمند", "رویداد", "جزئیات", "مهم", "امضا"]].concat(Array.from(evAll.values()).sort((a, b) => a.ts < b.ts ? 1 : -1)
+      .map(e => [e.date, e.time, e.ts, e.device, e.user, EV_FA[e.type] || e.type, e.info, EV_NOTE.has(e.type) ? "بله" : "", {ok: "سالم", bad: "دستکاری‌شده", none: "بدون امضا"}[e.ver || "none"]]));
+    sheets.push({name: "رویدادها", rows: ev, widths: [12, 10, 24, 8, 18, 30, 40, 8, 12], headerRow: 0, freezeRows: 1, filter: true});
+  }
+  if (filesV.length) {
+    const strip = t => String(t).replace(/<[^>]+>/g, "");
+    const al = [["سطح", "هشدار"]].concat(alerts.map(a => [{red: "قرمز", yellow: "زرد", info: "اطلاع"}[a.level], strip(a.text)]));
+    if (al.length === 1) al.push(["", "همه فایل‌ها سالم‌اند."]);
+    al.push([], ["فایل", "گوشی", "کارمند", "امضا", "ترتیب", "ردیف"]);
+    filesV.forEach(f => al.push([f.name, f.dev || "", f.user || "", {ok: "سالم", bad: "دستکاری‌شده یا جعلی", none: "بدون امضا", nocert: "پیش از مجوز"}[f.status] || "", f.range || "", f.entries.length]));
+    sheets.push({name: "هشدارهای امنیتی", rows: al, widths: [24, 110, 18, 18, 12, 8], headerRow: 0, freezeRows: 1});
+  }
   // 7. open requests of the system against the scans (only when the open-requests file was loaded)
   if (listOut && listOut.need) {
     const nr = [["پذیرش", "شاسی", "کد قطعه", "عنوان قطعه", "درخواستی", "موجودی سیستم", "VOR / شماره سفارش", "رسید اسکن‌شده", "تحویل اسکن‌شده", "وضعیت"]]
@@ -872,13 +1290,45 @@ $("#bmCopy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(BOOKMARK); $("#bmMsg").textContent = "کد کپی شد. اگر کشیدن کار نکرد: در Chrome کلیدهای Ctrl+Shift+O، بعد سه‌نقطه بالا ← Add new bookmark، نام «خروجی انبار» و در خانه URL کد را بچسبانید."; }
   catch(e) { $("#bmMsg").textContent = "کپی نشد. دکمه زرد را با موس به نوار بوکمارک بکشید."; }
 });
-$("#listBtn").addEventListener("click", () => { if (listOut) download(new Blob([JSON.stringify(listOut)], {type:"application/json"}), "anbar_list_" + stamp() + ".json"); });
+$("#listBtn").addEventListener("click", async () => {
+  if (!listOut) return;
+  // with a manager key, phones take only lists signed by it; the list also renews the phones' certificates
+  if (MGRK) {
+    if (!needMgr()) return;
+    if (!REG.settings.mgrPin) { secMsg("اول در کادر «امنیت»، «رمز مدیر روی گوشی‌ها» را تعیین و ذخیره کنید.", "err"); return; }
+    const o = await signPkg(Object.assign({}, listOut, {v: 3, sec: await secPack()}));
+    download(new Blob([JSON.stringify(o)], {type:"application/json"}), "anbar_list_" + stamp() + ".json");
+    await regLog("list", (listOut.rows || []).length + " پذیرش، " + o.sec.certs.length + " مجوز"); renderSec();
+    return;
+  }
+  download(new Blob([JSON.stringify(listOut)], {type:"application/json"}), "anbar_list_" + stamp() + ".json");
+});
 $("#slipBtn").addEventListener("click", printSlips);
 ["#fText", "#fFrom", "#fTo"].forEach(s => $(s).addEventListener("input", render));
 ["#fStaff", "#fMode"].forEach(s => $(s).addEventListener("change", render));
 $("#fClear").addEventListener("click", () => { ["#fText", "#fFrom", "#fTo"].forEach(s => $(s).value = ""); $("#fStaff").value = ""; $("#fMode").value = ""; render(); });
 $("#xlsxBtn").addEventListener("click", () => download(buildXlsx(), "Scan_Report_" + stamp() + ".xlsx"));
-window.__rep = {addFile, all: () => all, render, readXlsx, loadX, list: () => listOut, buildXlsx, code128svg, waiting, needStatus, wscExport, bookmark: BOOKMARK, pkey, lkey};
+// security card
+$("#mkBtn").addEventListener("click", mgrCreate);
+$("#rsBtn").addEventListener("click", mgrRestore);
+$("#ulBtn").addEventListener("click", mgrUnlock);
+$("#ulPass").addEventListener("keydown", e => { if (e.key === "Enter") mgrUnlock(); });
+$("#lkBtn").addEventListener("click", () => { mgrPriv = null; clearTimeout(mgrTimer); renderSec(); });
+$("#mjsBtn").addEventListener("click", () => { if (MGRK) downloadMgrJs(); });
+$("#bkBtn").addEventListener("click", () => { if (MGRK) downloadBackup(); });
+$("#setBtn").addEventListener("click", setSave);
+$("#reqRows").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const row = b.closest("tr"), fp = row.dataset.fp;
+  if (b.dataset.act === "approve") approve(fp, row);
+  else { pendingReq = pendingReq.filter(x => x.body.fp !== fp); renderSec(); }
+});
+$("#devRows").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if (!b) return; const row = b.closest("tr"); devAction(row.dataset.fp, b.dataset.act, row); });
+$("#devRows").addEventListener("change", e => { if (!e.target.matches("input[data-m]")) return; const row = e.target.closest("tr"); devAction(row.dataset.fp, "modes", row); });
+["#evDev", "#evType"].forEach(x => $(x).addEventListener("change", renderEvents));
+$("#evText").addEventListener("input", renderEvents);
+regCheck().then(renderSec);
+window.__rep = {addFile, all: () => all, render, verifyAll, alerts: () => alerts, events: () => evAll, files: () => filesV, reg: () => REG, mgr: () => MGRK, unlocked: () => !!mgrPriv, pending: () => pendingReq, readXlsx, loadX, list: () => listOut, buildXlsx, code128svg, waiting, needStatus, wscExport, bookmark: BOOKMARK, pkey, lkey};
 })();
 </script>
 </body>

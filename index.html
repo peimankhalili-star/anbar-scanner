@@ -105,6 +105,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 .pinfo .psrc{display:block;color:var(--muted);font-size:12px}
 .pinfo .muted{color:var(--muted);font-weight:400}
 .list .nm{font-size:13px;color:var(--muted)}
+#lockInfo bdi.code,#enFp bdi.code,#aboutBox bdi.code{white-space:nowrap}
 .sugi bdi.code{white-space:nowrap}
 .sugi.first{border:2px solid var(--accent);background:#FFF8DD}
 [hidden]{display:none!important}
@@ -136,6 +137,61 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
       <div class="msg err" id="setupErr" hidden></div>
       <button class="btn accent" id="saveSetup">ذخیره و شروع</button>
       <button class="btn ghost" id="cancelSetup" hidden>انصراف</button>
+    </div>
+  </section>
+
+  <!-- enrollment: in secure mode a phone works only with a certificate signed by the manager -->
+  <section id="vEnroll" hidden>
+    <div class="card stack">
+      <div class="step">ثبت این گوشی</div>
+      <p class="help">این برنامه فقط روی گوشی‌هایی کار می‌کند که مدیر انبار مجوزشان را امضا کرده باشد. فرم را پر کنید، درخواست را برای مدیر بفرستید، بعد فایلی را که مدیر برمی‌گرداند (مجوز یا فهرست امروز) اینجا بارگذاری کنید.</p>
+      <div id="enrollForm" class="stack">
+        <label for="enName">نام و نام خانوادگی کارمند</label>
+        <input id="enName" class="field" autocomplete="off">
+        <label for="enDev">کد گوشی (مثلاً A1)</label>
+        <input id="enDev" class="field" dir="ltr" autocomplete="off">
+        <label for="enPin">رمز شخصی کارمند (۴ تا ۸ رقم)</label>
+        <input id="enPin" class="field" type="password" inputmode="numeric" autocomplete="new-password" dir="ltr">
+        <label for="enPin2">تکرار رمز</label>
+        <input id="enPin2" class="field" type="password" inputmode="numeric" autocomplete="new-password" dir="ltr">
+        <div class="msg err" id="enErr" hidden></div>
+        <button class="btn accent" id="enMake">ساخت و فرستادن درخواست مجوز</button>
+      </div>
+      <div id="enrollWait" class="stack" hidden>
+        <p class="help" id="enWaitText"></p>
+        <button class="btn ghost" id="enShare">فرستادن دوباره درخواست</button>
+        <button class="btn ghost small" id="enRedo">ساختن درخواست تازه</button>
+      </div>
+      <label class="btn accent" for="secIn" style="text-align:center;margin:0">بارگذاری فایل مجوز یا فهرست امروز</label>
+      <div class="msg" id="enMsg" hidden></div>
+      <button class="btn ghost" id="enSend" hidden>فرستادن ثبت‌های ارسال‌نشده به مدیر</button>
+      <p class="help" id="enFp"></p>
+    </div>
+  </section>
+
+  <!-- lock -->
+  <section id="vLock" hidden>
+    <div class="card stack">
+      <div class="step" id="lockTitle">برنامه قفل است</div>
+      <p class="help" id="lockWhy"></p>
+      <div id="lockPinBox" class="stack">
+        <label for="lockPin">رمز شخصی</label>
+        <input id="lockPin" class="field" type="password" inputmode="numeric" autocomplete="off" dir="ltr">
+        <div class="msg err" id="lockErr" hidden></div>
+        <button class="btn accent" id="lockOk">باز کردن</button>
+        <button class="btn ghost small" id="lockForgot">رمز را فراموش کرده‌ام (با رمز مدیر)</button>
+      </div>
+      <div id="lockNewBox" class="stack" hidden>
+        <label for="lockNew1">رمز شخصی تازه (۴ تا ۸ رقم)</label>
+        <input id="lockNew1" class="field" type="password" inputmode="numeric" autocomplete="new-password" dir="ltr">
+        <label for="lockNew2">تکرار رمز تازه</label>
+        <input id="lockNew2" class="field" type="password" inputmode="numeric" autocomplete="new-password" dir="ltr">
+        <button class="btn accent" id="lockNewOk">ذخیره رمز تازه</button>
+      </div>
+      <button class="btn ghost" id="lockClock" hidden>ساعت گوشی درست است؛ ادامه با رمز مدیر</button>
+      <label class="btn ghost" for="secIn" style="text-align:center;margin:0">بارگذاری فایل فهرست یا مجوز</label>
+      <button class="btn ghost" id="lockSend">فرستادن ثبت‌های ارسال‌نشده به مدیر</button>
+      <p class="help" id="lockInfo"></p>
     </div>
   </section>
 
@@ -279,8 +335,8 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
     <div class="card stack">
       <div class="step" style="font-size:16px">فهرست پذیرش‌ها</div>
       <p class="help" id="listInfo">هنوز فهرستی روی این گوشی نیست.</p>
-      <label class="btn ghost" for="listIn" style="text-align:center;margin:0">بارگذاری فایل فهرست</label>
-      <input type="file" id="listIn" accept=".json,application/json" hidden>
+      <label class="btn ghost" for="listIn" style="text-align:center;margin:0">بارگذاری فایل فهرست یا مجوز</label>
+      <input type="file" id="listIn" accept=".json,.txt,application/json,text/plain" hidden>
       <p class="help">فایل فهرست را مدیر هر روز در صفحه گزارش کامپیوتر از خروجی سیستم می‌سازد و برای گوشی‌ها می‌فرستد. فهرست فقط روی همین گوشی می‌ماند و جایی فرستاده نمی‌شود.</p>
     </div>
     <div class="card stack">
@@ -295,6 +351,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
   </section>
 </main>
 
+<input type="file" id="secIn" accept=".json,.txt,application/json,text/plain" hidden>
 <div class="overlay" id="pinOverlay" hidden>
   <div class="card stack" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
     <div class="step" id="pinTitle">رمز مدیر</div>
@@ -313,6 +370,8 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 
 <script src="locations.js"></script>
 <script src="parts.js"></script>
+<script src="wsc-crypto.js"></script>
+<script src="manager.js"></script>
 <script src="zxing-reader.js"></script>
 <script>
 (function(){
@@ -353,6 +412,48 @@ function rid(){ return Math.random().toString(36).slice(2,6).toUpperCase(); }
 
 let settings = load(K_SET, null) || {user:"", device: rid()};
 let records = load(K_REC, []);
+
+// ---------- security core (v7) ----------
+// Secure mode starts when the site carries the manager's public key (manager.js). From then on the phone
+// works only with a certificate the manager signed; every record and every event is chained to the one
+// before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
+// tell a genuine, complete file from an edited, forged or partial one.
+const APP_VER = "7.0";
+const K_EV = "wsc.events.v1";
+const ZERO = "0".repeat(64);
+const ALL_MODES = ["rcv", "put", "iss", "out", "ret", "move", "count"];
+let events = load(K_EV, []);
+const MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
+function secOn(){ return !!(MGR || settings.mgrPub); }
+function mgrPub(){ return MGR ? MGR.pub : settings.mgrPub; }
+let devKey = null, devPub = "", devFp = "";
+const sec = {state: "boot", lastAct: Date.now()};
+function recPayload(r){ return {id:r.id, user:r.user, device:r.device, mode:r.mode, loc:r.loc, toLoc:r.toLoc, part:r.part, qty:r.qty, note:r.note,
+  doc:r.doc, dtype:r.dtype, rec:r.rec, chassis:r.chassis, ref:r.ref, party:r.party, ch:r.ch}; }
+function evPayload(e){ return {id:e.id, user:e.user, device:e.device, type:e.type, info:e.info}; }
+function entryHash(seq, prev, t, ts, d){ return WSC.sha256(WSC.canon({seq, prev, t, ts, d})); }
+function chainNext(x, t, payload){
+  const c = settings.chain || {seq: 0, h: ZERO};
+  x.seq = c.seq + 1; x.prev = c.h; x.h = entryHash(x.seq, x.prev, t, x.ts, payload);
+  settings.chain = {seq: x.seq, h: x.h};
+  settings.maxTs = Math.max(settings.maxTs || 0, Date.now());
+}
+// every event goes into the same chain as the records and travels to the manager with them
+function logEvent(type, info){
+  if (typeof WSC === "undefined") return null;
+  const e = {id: (settings.device || "X") + "-e" + Date.now().toString(36) + rid(), ts: new Date().toISOString(),
+    user: settings.user || "", device: settings.device || "", type, info: info == null ? "" : String(info), sent: false};
+  const before = settings.chain;
+  chainNext(e, "e", evPayload(e));
+  events.push(e);
+  if (!store(K_EV, events)) { events.pop(); settings.chain = before; return null; }
+  store(K_SET, settings);
+  return e;
+}
+function voided(){ return new Set(events.filter(e => e.type === "void").map(e => e.info)); }
+function liveRecords(){ const v = voided(); return records.filter(r => !v.has(r.id)); }
+// the phone's clock was turned back past the latest time it has already seen
+function clockBack(){ return (settings.maxTs || 0) - Date.now() > 10 * 60000; }
 let recList = load(K_LIST, null);
 let st = {mode: settings.lastMode && MODE_FA[settings.lastMode] && settings.lastMode !== "pick" ? settings.lastMode : "rcv",
   step:"loc", loc:null, part:null, qty:1, toLoc:null, manualQty:false, doc:null,
@@ -446,7 +547,7 @@ function pkey(c){ return norm(c).replace(/-\d{2,3}$/, ""); }
 // a trailing variant segment such as -GB1, -IUN or -SN is ignored for a "similar code" match
 function lkey(c){ const k = pkey(c), m = k.match(/^(.+-[A-Z0-9]+)-([A-Z0-9]{1,4})$/); return m && /[A-Z]/.test(m[2]) ? m[1] : k; }
 // quantity this phone has already saved for a reception and part
-function scannedQty(mode, r, k){ return records.filter(x => x.mode === mode && x.rec === r && pkey(x.part) === k).reduce((a, x) => a + x.qty, 0); }
+function scannedQty(mode, r, k){ return liveRecords().filter(x => x.mode === mode && x.rec === r && pkey(x.part) === k).reduce((a, x) => a + x.qty, 0); }
 // request lines matching a scanned part: level 1 same code, level 2 similar code
 function linesFor(pc, r){
   const a = pkey(pc), b = lkey(pc);
@@ -599,6 +700,7 @@ function startDoc(){
     rec: t.rec && x ? x.r : "", chassis: t.rec && x ? x.c : "", ch: t.rec && x && x.ch ? x.ch.join("/") : "",
     ref: t.ref ? st.hdr.ref : "", party: t.party ? st.hdr.party : "", lines: 0, qty: 0};
   st.step = "part"; st.sug = null;
+  logEvent("doc_open", st.doc.id + " | " + st.doc.typeFa + (st.doc.rec ? " | پذیرش " + st.doc.rec : "") + (st.doc.ref ? " | مرجع " + st.doc.ref : ""));
   const extra = st.mode === "ret" && t.k === "BAD" ? " قطعه معیوب به منطقه RTN می‌رود." : "";
   if (st.pending) { const p = st.pending; st.pending = null; setPart(p, "سند " + code(st.doc.id) + " باز شد. "); return; }
   ok("سند " + code(st.doc.id) + " باز شد. قطعه‌ها را اسکن کنید؛ هر اسکن یک عدد." + extra);
@@ -607,6 +709,7 @@ function finishDoc(quiet){
   if (!st.doc) return true;
   if (st.step === "qty" && !commit()) return false;
   const d = st.doc;
+  logEvent("doc_close", d.id + " | " + d.lines + " قلم، " + d.qty + " عدد");
   st.doc = null; st.step = "doc"; st.part = null; st.manualQty = false; st.loc = null; st.pending = null; st.sug = null;
   st.hdr = {type: st.hdr.type, rec: null, ref: "", party: "", carried: !!st.hdr.type};
   if (!quiet) {
@@ -618,6 +721,9 @@ function finishDoc(quiet){
 
 // ---------- flow ----------
 function onScan(raw, src){
+  if (secOn() && sec.state !== "open") return;
+  if (secOn() && clockBack()) { secCheck(); return; }
+  sec.lastAct = Date.now();
   const c0 = norm(raw);
   if (!c0) return;
   const c = classify(c0);
@@ -715,6 +821,8 @@ function moveFlow(c){
 function setQty(n){ st.qty = Math.max(1, Math.floor(n) || 1); $("#qty").value = st.qty; }
 function commit(note){
   if (st.step !== "qty" || !st.part) return null;
+  // a record is never saved with a clock that was turned back
+  if (secOn() && (sec.state !== "open" || clockBack())) { if (sec.state === "open") secCheck(); return null; }
   const q = Math.floor(Number($("#qty").value));
   if (!(q > 0)) { fail("تعداد را درست وارد کنید."); return null; }
   if (st.mode === "move" && !st.toLoc) { fail("اول بارکد مکان مقصد را اسکن کنید."); return null; }
@@ -725,8 +833,11 @@ function commit(note){
     part: st.part, qty: q, note: [note, fl.note, st.manualQty ? "تعداد دستی با رمز مدیر" : ""].filter(Boolean).join("؛ "),
     doc: d.id || "", dtype: d.typeFa || "", rec: d.rec || "", chassis: d.chassis || "", ref: d.ref || "", party: d.party || "", ch: d.ch || "",
     sent: false};
+  const before = settings.chain;
+  chainNext(rec, "r", recPayload(rec));
   records.push(rec);
-  if (!store(K_REC, records)) { records.pop(); fail("حافظه گوشی پر است؛ اول ثبت‌ها را بفرستید و پاک کنید."); return null; }
+  if (!store(K_REC, records)) { records.pop(); settings.chain = before; fail("حافظه گوشی پر است؛ اول ثبت‌ها را بفرستید و پاک کنید."); return null; }
+  store(K_SET, settings);
   if (st.doc) { st.doc.lines++; st.doc.qty += q; }
   st.part = null; st.toLoc = null; st.manualQty = false;
   st.step = st.doc ? "part" : (st.loc ? "part" : "loc"); setQty(1);
@@ -770,7 +881,7 @@ function recItem(r, withDel){
   return '<li><span class="tag ' + esc(r.mode) + '">' + esc(MODE_FA[r.mode] || r.mode) + '</span>' +
     '<div class="what">' + code(r.part) + " × " + r.qty + (partLookup(r.part) ? ' <span class="nm">' + esc(partLookup(r.part).name) + "</span>" : "") + "<small>" + (head ? head + " | " : "") + (where ? where + " | " : "") + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
     (r.sent ? ' | <span class="sent">ارسال‌شده</span>' : "") + (r.note ? " | " + esc(r.note) : "") + "</small></div>" +
-    (withDel ? '<button class="del" data-del="' + esc(r.id) + '">حذف</button>' : "") + "</li>";
+    (r.void ? '<span class="tag out">حذف‌شده</span>' : withDel ? '<button class="del" data-del="' + esc(r.id) + '">حذف</button>' : "") + "</li>";
 }
 function renderDoc(){
   const isDoc = DOC_MODES.has(st.mode);
@@ -830,7 +941,8 @@ function renderDoc(){
 let listFilter = "today";
 function render(){
   $("#userChip").textContent = settings.user || "نام";
-  const unsent = records.filter(r => !r.sent).length;
+  const unsent = records.filter(r => !r.sent).length, unsentEv = events.filter(e => !e.sent).length;
+  const vset = voided(); records.forEach(r => { r.void = vset.has(r.id); });
   $("#unsentChip").textContent = unsent;
   $$(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === st.mode));
   renderDoc();
@@ -865,10 +977,11 @@ function render(){
   const sentN = records.filter(r => r.sent).length;
   $("#clearSent").textContent = "پاک کردن ثبت‌های ارسال‌شده (" + sentN + ")";
   $("#clearSent").disabled = sentN === 0;
-  $("#shareUnsent").disabled = unsent === 0;
-  $("#shareAll").disabled = records.length === 0;
-  $("#downloadAll").disabled = records.length === 0;
+  $("#shareUnsent").disabled = unsent + unsentEv === 0;
+  $("#shareAll").disabled = records.length + events.length === 0;
+  $("#downloadAll").disabled = records.length + events.length === 0;
   renderListInfo();
+  $("#aboutBox").innerHTML = aboutHtml();
 }
 function renderListInfo(){
   const n = listRows().length;
@@ -884,9 +997,11 @@ function renderListInfo(){
   $("#listInfo").innerHTML = n + " پذیرش، ساخته‌شده " + code(recList.made || "?") + (age != null && age >= 2 ? ' <span class="warn">(' + age + " روز پیش؛ فهرست تازه بگیرید)</span>" : "") + needTxt;
 }
 function show(view){
+  if (secOn() && sec.state !== "open" && !["vEnroll", "vLock"].includes(view)) return;   // nothing behind the lock
   $$("main > section").forEach(s => s.hidden = s.id !== view);
   $$("nav button").forEach(b => { if (b.dataset.view === view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
-  $("nav").hidden = view === "vSetup";
+  $("nav").hidden = ["vSetup", "vEnroll", "vLock"].includes(view);
+  $("#unsentChip").hidden = ["vSetup", "vEnroll", "vLock"].includes(view);
   if (view !== "vScan") stopCam();
 }
 
@@ -1041,36 +1156,69 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) stopC
 
 // ---------- export ----------
 const CSV_HEAD = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت",
-  "شناسه سند","نوع سند","شماره پذیرش","شاسی","شماره مرجع","طرف","کانال سفارش"];
-function csvOf(rows){
+  "شناسه سند","نوع سند","شماره پذیرش","شاسی","شماره مرجع","طرف","کانال سفارش",
+  "نوع ردیف","رویداد","جزئیات رویداد","ترتیب","اثر قبلی","اثر"];
+// one CSV holds records and events in chain order; in secure mode the last line carries this phone's signature
+function csvOf(recs, evs, sigRow){
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
   const lines = [CSV_HEAD.map(q).join(",")];
-  rows.forEach(r => { const d = new Date(r.ts); lines.push([r.id, jDate(d), jTime(d), r.ts, r.user, r.device, MODE_FA[r.mode] || r.mode, r.loc, r.toLoc, r.part, r.qty, r.note,
-    r.doc, r.dtype, r.rec, r.chassis, r.ref, r.party, r.ch].map(q).join(",")); });
+  const rows = recs.map(r => ({t: "r", x: r})).concat(evs.map(e => ({t: "e", x: e})))
+    .sort((a, b) => (a.x.seq || 0) - (b.x.seq || 0) || (a.x.ts < b.x.ts ? -1 : 1));
+  rows.forEach(({t, x}) => {
+    const d = new Date(x.ts);
+    const base = [x.id, jDate(d), jTime(d), x.ts, x.user, x.device];
+    const body = t === "r"
+      ? [MODE_FA[x.mode] || x.mode, x.loc, x.toLoc, x.part, x.qty, x.note, x.doc, x.dtype, x.rec, x.chassis, x.ref, x.party, x.ch, "ثبت", "", ""]
+      : ["رویداد", "", "", "", "", "", "", "", "", "", "", "", "", "رویداد", x.type, x.info];
+    lines.push(base.concat(body, [x.seq || "", x.prev || "", x.h || ""]).map(q).join(","));
+  });
+  if (sigRow) lines.push(sigRow.map(q).join(","));
   return "﻿" + lines.join("\r\n") + "\r\n";
 }
 function fileName(){
   const d = new Date(), p = n => String(n).padStart(2, "0");
   return "scans_" + settings.device + "_" + jDate(d).replace(/\//g, "") + "_" + p(d.getHours()) + p(d.getMinutes()) + ".csv";
 }
-function markSent(rows){ const ids = new Set(rows.map(r => r.id)); records.forEach(r => { if (ids.has(r.id)) r.sent = true; }); store(K_REC, records); render(); }
+function markSent(recs, evs){
+  const ids = new Set(recs.map(r => r.id).concat(evs.map(e => e.id)));
+  records.forEach(r => { if (ids.has(r.id)) r.sent = true; }); events.forEach(e => { if (ids.has(e.id)) e.sent = true; });
+  store(K_REC, records); store(K_EV, events); render();
+}
 function download(blob, name){
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
 }
+// signature line: who sent it (the certificate the manager signed), which part of the chain, and its last link
+async function signRow(recs, evs){
+  if (!secOn() || !devKey) return null;
+  const chained = recs.concat(evs).filter(x => x.seq).sort((a, b) => a.seq - b.seq);
+  if (!chained.length) return null;
+  const now = new Date();
+  const meta = {v: 7, app: APP_VER, dev: settings.device, name: settings.user, devPub, cert: settings.cert || null,
+    first: chained[0].seq, last: chained[chained.length - 1].seq, prev: chained[0].prev, head: chained[chained.length - 1].h,
+    n: chained.length, made: jDate(now) + " " + jTime(now), madeTs: now.toISOString()};
+  return ["#WSC-SIG", JSON.stringify(meta), await WSC.sign(devKey.privateKey, WSC.canon(meta))];
+}
 async function sendRows(which, forceDownload){
   if (st.doc && !finishDoc()) return;     // an open document's last line is saved first
-  const rows = which === "unsent" ? records.filter(r => !r.sent) : records.slice();
-  if (!rows.length) return;
+  const anyUnsent = records.some(r => !r.sent) || events.some(e => !e.sent);
+  if (which === "unsent" && !anyUnsent) return;
+  logEvent("export", which === "unsent" ? "ارسال‌نشده‌ها" : "همه");
+  const recs = which === "unsent" ? records.filter(r => !r.sent) : records.slice();
+  const evs = which === "unsent" ? events.filter(e => !e.sent) : events.slice();
+  if (!recs.length && !evs.length) return;
   const name = fileName();
-  const blob = new Blob([csvOf(rows)], {type:"text/csv;charset=utf-8"});
+  let sig = null;
+  try { sig = await signRow(recs, evs); } catch(e) { sig = null; }
+  const blob = new Blob([csvOf(recs, evs, sig)], {type:"text/csv;charset=utf-8"});
   const file = new File([blob], name, {type:"text/csv"});
+  const n = recs.length;
   if (!forceDownload && navigator.canShare && navigator.canShare({files:[file]})) {
-    try { await navigator.share({files:[file], title:name}); markSent(rows); say(rows.length + " ثبت ارسال شد.", "ok"); }
-    catch(e) { if (e && e.name !== "AbortError") { download(blob, name); markSent(rows); say("اشتراک کار نکرد؛ فایل روی گوشی ذخیره شد: " + esc(name), "info"); } }
+    try { await navigator.share({files:[file], title:name}); markSent(recs, evs); say(n + " ثبت" + (evs.length ? " و " + evs.length + " رویداد" : "") + " ارسال شد.", "ok"); }
+    catch(e) { if (e && e.name !== "AbortError") { download(blob, name); markSent(recs, evs); say("اشتراک کار نکرد؛ فایل روی گوشی ذخیره شد: " + esc(name), "info"); } }
     return;
   }
-  download(blob, name); markSent(rows);
+  download(blob, name); markSent(recs, evs);
   say("فایل ذخیره شد: " + esc(name) + ". از پوشه Download گوشی برای کامپیوتر بفرستید.", "ok");
 }
 
@@ -1097,6 +1245,7 @@ $("#qty").addEventListener("input", () => { const n = Math.floor(Number($("#qty"
 $("#saveBtn").addEventListener("click", () => commit());
 $("#qManual").addEventListener("click", async () => {
   if (!(await askPin("برای وارد کردن تعداد با دست (مثلاً کارتن بسته)، رمز مدیر لازم است."))) return;
+  logEvent("manual_qty", (st.part || "") + (st.doc ? " | سند " + st.doc.id : ""));
   st.manualQty = true; render(); $("#qty").focus(); $("#qty").select();
   say("تعداد را بنویسید و «" + esc($("#saveBtn").textContent) + "» را بزنید.", "info");
 });
@@ -1128,6 +1277,7 @@ $("#recOutOk").addEventListener("click", () => {
   if (no.length < 6) { fail("شماره پذیرش را کامل بنویسید."); return; }
   if (!/^[A-Z0-9]{17}$/.test(vin)) { fail("شماره شاسی باید ۱۷ حرف و عدد باشد."); return; }
   $("#recOutForm").hidden = true;
+  logEvent("rec_out", no + " | " + vin);
   selectRec({r: no, c: vin, ch: [], manual: true}); render(); ok("پذیرش " + code(no) + " خارج از فهرست انتخاب شد.");
 });
 $("#refIn").addEventListener("input", () => { st.hdr.ref = norm($("#refIn").value); renderDoc(); });
@@ -1135,33 +1285,82 @@ $("#partyIn").addEventListener("input", () => { st.hdr.party = $("#partyIn").val
 $("#docStart").addEventListener("click", () => { const why = missing(); if (why) { fail(esc(why)); return; } startDoc(); render(); });
 $("#docFinish").addEventListener("click", () => { finishDoc(); render(); });
 // receptions list file
-$("#listIn").addEventListener("change", async e => {
-  const f = e.target.files && e.target.files[0]; e.target.value = "";
-  if (!f) return;
-  try {
-    const o = JSON.parse(await f.text());
-    if (!o || o.kind !== "wsc-list" || !Array.isArray(o.rows)) throw new Error("bad");
+// messages while the enrollment or lock screen is showing go there, not to the hidden scan screen
+function note(t, bad){
+  const box = !$("#vEnroll").hidden ? $("#enMsg") : !$("#vLock").hidden ? $("#lockErr") : null;
+  if (!box) { if (bad) fail(t); else ok(t); return; }
+  box.className = "msg " + (bad ? "err" : "ok"); box.innerHTML = t; box.hidden = false; beep(!bad);
+}
+// receptions list, certificate: in secure mode only files signed by the manager are accepted
+async function loadSigned(f){
+  let o, old = false;
+  try { o = JSON.parse(await f.text()); } catch(err) { note("این فایل خوانده نشد.", true); return; }
+  if (!o || (o.kind !== "wsc-list" && o.kind !== "wsc-cert") || (o.kind === "wsc-list" && !Array.isArray(o.rows))) { note("این فایل، فایل فهرست یا مجوز نیست.", true); return; }
+  if (secOn()) {
+    const body = Object.assign({}, o); delete body.sig;
+    const good = !!o.sig && await WSC.verify(mgrPub(), o.sig, WSC.canon(body));
+    if (!good) { logEvent("list_reject", f.name); note("این فایل امضای مدیر را ندارد یا دستکاری شده است؛ بارگذاری نشد.", true); return; }
+    // an older signed file cannot undo a newer one (for example, a list from before a phone was cut off):
+    // its receptions still load, but its security part (permit, cut-off list, PIN) is ignored
+    const iat = Date.parse((o.sec || {}).iat || "") || 0;
+    if (settings.secIat && iat < Date.parse(settings.secIat)) {
+      logEvent("list_old", f.name + " | " + ((o.sec || {}).iat || ""));
+      if (o.kind !== "wsc-list") { note("این فایل مجوز قدیمی‌تر از آخرین فایل بارگذاری‌شده است؛ فایل تازه‌تر را بگیرید.", true); return; }
+      old = true;
+    } else applySec(o.sec || {});
+  }
+  if (o.kind === "wsc-list") {
     o.rows = o.rows.filter(x => x && x.r).map(x => ({r: String(x.r), c: String(x.c || "").toUpperCase(), ch: Array.isArray(x.ch) ? x.ch : [], d: x.d || "", m: x.m || "", s: x.s || ""}));
     if (o.need && Array.isArray(o.need.lines)) {
       o.need = {made: String(o.need.made || ""), madeTs: o.need.madeTs || "",
         lines: o.need.lines.filter(L => L && L.r && L.p).map(L => ({r: String(L.r), p: norm(L.p), n: String(L.n || ""), q: Number(L.q) || 0, s: Number(L.s) || 0,
           d: String(L.d || ""), t: L.t === "VOR" ? "VOR" : "", o: String(L.o || "")}))};
     } else delete o.need;
-    if (!store(K_LIST, o)) { fail("حافظه گوشی برای فهرست کافی نیست."); return; }
-    recList = o; st.sug = null; render();
-    ok("فهرست بارگذاری شد: " + o.rows.length + " پذیرش" + (o.need ? "، " + o.need.lines.filter(L => !L.d).length + " قلم درخواست باز" : "") + ".");
-  } catch(err) { fail("این فایل، فایل فهرست پذیرش‌ها نیست."); }
-});
+    delete o.sec; delete o.sig;
+    if (!store(K_LIST, o)) { note("حافظه گوشی برای فهرست کافی نیست.", true); return; }
+    recList = o; st.sug = null;
+    logEvent("list_load", (o.made || "") + " | " + o.rows.length + " پذیرش");
+    note("فهرست بارگذاری شد: " + o.rows.length + " پذیرش" + (o.need ? "، " + o.need.lines.filter(L => !L.d).length + " قلم درخواست باز" : "") + "." +
+      (old ? "<br>این فهرست قدیمی‌تر از آخرین فایل مدیر است؛ تنظیمات امنیتی آن اعمال نشد." : ""), false);
+  } else {
+    logEvent("cert_load", settings.cert ? "تا " + settings.cert.body.exp.slice(0, 10) : "");
+    note(settings.cert && settings.cert.body.pub === devPub ? "فایل مجوز بارگذاری شد." : "فایل امضای مدیر را دارد، ولی مجوزی برای این گوشی در آن نیست.", !(settings.cert && settings.cert.body.pub === devPub));
+  }
+  if (secOn()) {
+    const s = await secCheck();
+    if (s === "ok" && sec.state !== "open") lockScreen("مجوز این گوشی معتبر است" + certUntil() + ". رمز شخصی را بزنید.", true);
+  }
+  render();
+}
+// security part of a signed list or certificate file
+function applySec(x){
+  const mine = (x.certs || []).find(c => c && c.body && c.body.pub === devPub);
+  if (mine) settings.cert = mine;
+  if (Array.isArray(x.revoked)) settings.revoked = x.revoked;
+  if (x.mgrPin && x.mgrPin.hash) settings.mgrPinC = x.mgrPin;
+  if (x.idleMin) settings.idleMin = Math.max(1, Number(x.idleMin) || 30);
+  if (x.iat) { settings.secIat = x.iat; settings.maxTs = Math.max(settings.maxTs || 0, (Date.parse(x.iat) || 0) - 3600000); }
+  store(K_SET, settings);
+}
+$("#listIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) loadSigned(f); });
+$("#secIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) loadSigned(f); });
 $("#allList").addEventListener("click", async e => {
   const b = e.target.closest("[data-del]"); if (!b) return;
   const id = b.dataset.del;
   if (!(await askPin("برای حذف یک ثبت، رمز مدیر لازم است."))) return;
-  records = records.filter(r => r.id !== id); store(K_REC, records); render(); say("ثبت حذف شد.", "info");
+  // nothing is erased: a «حذف» event marks the record, and both go to the manager
+  const r = records.find(x => x.id === id);
+  logEvent("void", id);
+  render(); say("ثبت " + (r ? code(r.part) + " × " + r.qty + " " : "") + "حذف‌شده علامت خورد.", "info");
 });
 $("#shareUnsent").addEventListener("click", () => sendRows("unsent", false));
 $("#shareAll").addEventListener("click", () => sendRows("all", false));
 $("#downloadAll").addEventListener("click", () => sendRows("all", true));
-$("#clearSent").addEventListener("click", e => twoTap(e.currentTarget, "مطمئنید؟ دوباره بزنید", () => { records = records.filter(r => !r.sent); store(K_REC, records); render(); say("ثبت‌های ارسال‌شده پاک شدند.", "info"); }));
+$("#clearSent").addEventListener("click", e => twoTap(e.currentTarget, "مطمئنید؟ دوباره بزنید", () => {
+  const n = records.filter(r => r.sent).length;
+  records = records.filter(r => !r.sent); events = events.filter(x => !x.sent);
+  store(K_REC, records); store(K_EV, events); logEvent("clear_sent", n); render(); say("ثبت‌های ارسال‌شده پاک شدند.", "info");
+}));
 $("#unsentChip").addEventListener("click", () => { show("vSend"); render(); });
 // ---------- manager PIN ----------
 async function hashPin(pin, salt){
@@ -1175,11 +1374,15 @@ async function hashPin(pin, salt){
   return "f" + h.toString(16);
 }
 function pinDigits(s){ return norm(s).replace(/[^0-9]/g, ""); }
-let pinFails = 0, pinLockUntil = 0, pinResolve = null;
+let pinFails = 0, pinLockUntil = 0, pinResolve = null, pinWhy = "";
+// manager PIN: the one the manager set centrally (arrives in the signed list), else the one set on this phone
 function askPin(reason){
   return new Promise(res => {
-    if (!settings.pin) { res(true); return; }
-    pinResolve = res;
+    if (!settings.mgrPinC && !settings.pin) {
+      if (secOn()) { fail("رمز مدیر هنوز برای گوشی‌ها تعیین نشده است. مدیر باید در صفحه گزارش «رمز مدیر برای گوشی‌ها» را تعیین کند و فهرست تازه بفرستد."); res(false); return; }
+      res(true); return;
+    }
+    pinResolve = res; pinWhy = reason;
     $("#pinReason").textContent = reason; $("#pinIn").value = ""; $("#pinErr").hidden = true;
     $("#pinOverlay").hidden = false; setTimeout(() => $("#pinIn").focus(), 50);
   });
@@ -1189,9 +1392,10 @@ function showPinErr(t){ const e = $("#pinErr"); e.textContent = t; e.hidden = fa
 async function checkPin(){
   const now = Date.now();
   if (now < pinLockUntil) { showPinErr("چند بار رمز اشتباه زده شد. " + Math.ceil((pinLockUntil - now) / 1000) + " ثانیه صبر کنید."); return; }
-  const h = await hashPin(pinDigits($("#pinIn").value), settings.pin.salt);
-  if (h === settings.pin.hash) { pinFails = 0; closePin(true); return; }
-  pinFails++; $("#pinIn").value = ""; beep(false);
+  const pin = pinDigits($("#pinIn").value);
+  const good = settings.mgrPinC ? await WSC.pinCheck(pin, settings.mgrPinC) : (await hashPin(pin, settings.pin.salt)) === settings.pin.hash;
+  if (good) { pinFails = 0; logEvent("mgr_ok", pinWhy); closePin(true); return; }
+  pinFails++; $("#pinIn").value = ""; beep(false); logEvent("mgr_fail", pinWhy);
   if (pinFails >= 5) { pinFails = 0; pinLockUntil = Date.now() + 60000; showPinErr("رمز ۵ بار اشتباه بود. ۶۰ ثانیه صبر کنید."); }
   else showPinErr("رمز اشتباه است.");
 }
@@ -1211,7 +1415,10 @@ function openSetup(edit){
   $("#setupErr").hidden = true;
   show("vSetup");
 }
-$("#userChip").addEventListener("click", async () => { if (await askPin("برای تغییر نام یا کد گوشی، رمز مدیر لازم است.")) openSetup(true); });
+$("#userChip").addEventListener("click", async () => {
+  if (secOn()) { if (sec.state === "open") { logEvent("lock", "دستی"); lockScreen("برنامه قفل شد.", true); } return; }
+  if (await askPin("برای تغییر نام یا کد گوشی، رمز مدیر لازم است.")) openSetup(true);
+});
 $("#cancelSetup").addEventListener("click", () => { show("vScan"); render(); });
 $("#saveSetup").addEventListener("click", async () => {
   const err = t => { const e = $("#setupErr"); e.textContent = t; e.hidden = false; beep(false); };
@@ -1242,12 +1449,220 @@ $("#updBtn").addEventListener("click", async () => {
   try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch(e) {}
   location.reload();
 });
-$("#aboutBox").innerHTML = "<b>نسخه 6.2</b>. " + (typeof WS_PARTS !== "undefined" ? "فهرست قطعات: " + Object.keys(WS_PARTS.p).length + " کد، نسخه " + esc(WS_PARTS.v) + ". " : "") + "فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
+// ---------- security screens (v7) ----------
+const WHY = {
+  revoked: "دسترسی این گوشی را مدیر قطع کرده است. برای کار با این گوشی با مدیر انبار صحبت کنید.",
+  expired: "مجوز این گوشی تمام شده است. فایل فهرست امروز را از مدیر بگیرید و اینجا بارگذاری کنید تا تمدید شود.",
+  clock: "ساعت یا تاریخ این گوشی عقب کشیده شده است. ساعت گوشی را درست کنید (تنظیم خودکار) و برنامه را دوباره باز کنید."
+};
+function idleMs(){ return (settings.idleMin || 30) * 60000; }
+function certUntil(){ return settings.cert ? " تا " + jDate(new Date(settings.cert.body.exp)) : ""; }
+function aboutHtml(){
+  const head = "<b>نسخه " + APP_VER + "</b>. " + (typeof WS_PARTS !== "undefined" ? "فهرست قطعات: " + Object.keys(WS_PARTS.p).length + " کد، نسخه " + esc(WS_PARTS.v) + ". " : "") +
+    "فهرست مکان‌ها: " + WS_DATA.locations.length + " مکان، نسخه " + esc(WS_DATA.version) + ". برنامه بدون اینترنت هم کار می‌کند.";
+  if (!secOn()) return head + '<br><span class="warn">امنیت هنوز روشن نشده است (کلید مدیر روی سایت نیست).</span>';
+  return head + "<br>" + secInfo();
+}
+function secInfo(){
+  return "امنیت: روشن · گوشی " + code(settings.device || "?") + (settings.user ? " · " + esc(settings.user) : "") +
+    "<br>اثر انگشت گوشی: " + code(devFp || "?") + " · کلید مدیر: " + code(MGR ? MGR.fp : settings.mgrPub ? WSC.fp(settings.mgrPub) : "—") +
+    (settings.cert ? "<br>مجوز" + certUntil() + " · قفل بعد از " + (settings.idleMin || 30) + " دقیقه بی‌کاری" : "");
+}
+async function ensureDevKey(){
+  let pair = await WSC.kvGet("dev");
+  if (!pair || !pair.privateKey) { pair = await WSC.genKey(false); await WSC.kvSet("dev", pair); }
+  devKey = pair; devPub = await WSC.exportPub(pair); devFp = WSC.fp(devPub);
+}
+async function certState(){
+  if (!settings.cert || !settings.cert.body) return "none";
+  const c = settings.cert;
+  if (c.body.pub !== devPub || !(await WSC.verifyObj(mgrPub(), c))) return "bad";
+  if ((settings.revoked || []).includes(devFp)) return "revoked";
+  if (clockBack()) return "clock";
+  if (Date.now() > Date.parse(c.body.exp)) return "expired";
+  return "ok";
+}
+function allowedModes(){
+  const b = settings.cert && settings.cert.body;
+  return secOn() && b && Array.isArray(b.modes) && b.modes.length ? ALL_MODES.filter(m => b.modes.includes(m)) : ALL_MODES;
+}
+function applyCert(){
+  if (!settings.cert) return;
+  const b = settings.cert.body;
+  if (settings.user !== b.name || settings.device !== b.dev) { settings.user = b.name; settings.device = b.dev; store(K_SET, settings); }
+  const okm = new Set(allowedModes());
+  $$(".modes button").forEach(x => x.hidden = !okm.has(x.dataset.mode));
+  if (!okm.has(st.mode)) {
+    if (st.doc) finishDoc(true);
+    st.mode = allowedModes()[0]; st.part = null; st.pending = null; st.sug = null; st.loc = null;
+    st.step = DOC_MODES.has(st.mode) ? "doc" : "loc"; st.hdr = {type:null, rec:null, ref:"", party:""};
+  }
+}
+async function secCheck(){
+  let s = await certState();
+  if (s === "bad") { logEvent("cert_bad", ""); settings.cert = null; store(K_SET, settings); s = "none"; }
+  if (s === "none") { showEnroll(); return s; }
+  applyCert();
+  if (s !== "ok") {
+    if (sec.state !== "blocked:" + s) logEvent(s === "clock" ? "clock_back" : s, s === "clock" ? new Date().toISOString() + " < " + new Date(settings.maxTs).toISOString() : "");
+    sec.state = "blocked:" + s; lockScreen(WHY[s], false);
+  }
+  return s;
+}
+function lockScreen(why, pinAllowed){
+  stopCam();
+  if (!$("#pinOverlay").hidden) closePin(false);
+  if (pinAllowed) sec.state = "locked";
+  $$("main > section").forEach(x => x.hidden = x.id !== "vLock");
+  $("nav").hidden = true; $("#unsentChip").hidden = true;
+  $("#lockTitle").textContent = pinAllowed ? "قفل · " + (settings.user || "") : "برنامه قفل است";
+  $("#lockWhy").textContent = why;
+  $("#lockPinBox").hidden = !pinAllowed; $("#lockNewBox").hidden = true; $("#lockErr").hidden = true;
+  $("#lockClock").hidden = sec.state !== "blocked:clock";
+  const un = records.filter(r => !r.sent).length + events.filter(e => !e.sent).length;
+  $("#lockSend").hidden = un === 0;
+  $("#lockSend").textContent = "فرستادن " + un + " ثبت و رویداد ارسال‌نشده به مدیر";
+  $("#lockInfo").innerHTML = secInfo();
+  if (pinAllowed) setTimeout(() => $("#lockPin").focus(), 50);
+}
+function lockErr(t){ const e = $("#lockErr"); e.textContent = t; e.hidden = false; beep(false); }
+async function tryUnlock(){
+  if (Date.now() < (settings.pinLockUntil || 0)) { lockErr("چند بار رمز اشتباه زده شد. " + Math.ceil((settings.pinLockUntil - Date.now()) / 1000) + " ثانیه صبر کنید."); return; }
+  const s = await certState();
+  if (s !== "ok") { await secCheck(); return; }
+  if (!settings.empPin) { lockErr("رمز شخصی روی این گوشی تعیین نشده است. «رمز را فراموش کرده‌ام» را بزنید."); return; }
+  const pin = pinDigits($("#lockPin").value); $("#lockPin").value = "";
+  if (await WSC.pinCheck(pin, settings.empPin)) { settings.pinFails = 0; store(K_SET, settings); openApp(); return; }
+  settings.pinFails = (settings.pinFails || 0) + 1;
+  logEvent("pin_fail", String(settings.pinFails));
+  if (settings.pinFails >= 5) { settings.pinFails = 0; settings.pinLockUntil = Date.now() + 60000; logEvent("pin_block", ""); lockErr("رمز ۵ بار اشتباه بود. ۶۰ ثانیه صبر کنید."); }
+  else lockErr("رمز اشتباه است.");
+  store(K_SET, settings);
+}
+function openApp(){
+  logEvent("unlock", "");
+  sec.state = "open"; sec.lastAct = Date.now();
+  applyCert(); show("vScan"); render();
+  const left = settings.cert ? (Date.parse(settings.cert.body.exp) - Date.now()) / 864e5 : 99;
+  say("خوش آمدید، " + esc(settings.user) + "." + (left < 3 ? ' <span class="warn">مجوز این گوشی ' + Math.max(0, Math.ceil(left)) + " روز دیگر تمام می‌شود؛ فهرست امروز را بارگذاری کنید.</span>" : ""), "info");
+}
+$("#lockOk").addEventListener("click", tryUnlock);
+$("#lockPin").addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+$("#lockForgot").addEventListener("click", async () => {
+  if (!settings.mgrPinC && !settings.pin) { lockErr("رمز مدیر هنوز برای گوشی‌ها تعیین نشده است؛ مدیر باید آن را در صفحه گزارش تعیین کند."); return; }
+  if (!(await askPin("برای تعیین رمز شخصی تازه، رمز مدیر لازم است."))) return;
+  $("#lockPinBox").hidden = true; $("#lockNewBox").hidden = false; $("#lockNew1").value = ""; $("#lockNew2").value = ""; $("#lockNew1").focus();
+});
+$("#lockNewOk").addEventListener("click", async () => {
+  const p1 = pinDigits($("#lockNew1").value), p2 = pinDigits($("#lockNew2").value);
+  if (p1.length < 4 || p1.length > 8) { lockErr("رمز باید ۴ تا ۸ رقم باشد."); return; }
+  if (p1 !== p2) { lockErr("رمز و تکرارش یکی نیستند."); return; }
+  settings.empPin = await WSC.pinHash(p1); settings.pinFails = 0; store(K_SET, settings);
+  logEvent("pin_reset", "");
+  const s = await certState();
+  if (s === "ok") openApp(); else secCheck();
+});
+$("#lockClock").addEventListener("click", async () => {
+  if (!(await askPin("ساعت گوشی عقب‌تر از آخرین ثبت است. اگر مطمئنید ساعت گوشی الان درست است، رمز مدیر را بزنید."))) return;
+  logEvent("clock_reset", new Date(settings.maxTs).toISOString() + " → " + new Date().toISOString());
+  settings.maxTs = Date.now(); store(K_SET, settings);
+  const s = await secCheck();
+  if (s === "ok") lockScreen("رمز شخصی را بزنید.", true);
+});
+$("#lockSend").addEventListener("click", async () => {
+  await sendRows("unsent", false);
+  const why = $("#lockWhy").textContent, pinOk = !$("#lockPinBox").hidden;
+  lockScreen(why, pinOk);
+  if (sec.state.startsWith("blocked")) sec.state = sec.state;   // stays blocked
+});
+// enrollment
+function showEnroll(){
+  sec.state = "enroll"; stopCam();
+  $$("main > section").forEach(x => x.hidden = x.id !== "vEnroll");
+  $("nav").hidden = true; $("#unsentChip").hidden = true;
+  const req = settings.enroll;
+  $("#enrollForm").hidden = !!req; $("#enrollWait").hidden = !req; $("#enErr").hidden = true;
+  if (!req) { $("#enName").value = settings.user || ""; $("#enDev").value = settings.device || ""; }
+  else $("#enWaitText").innerHTML = "درخواست مجوز گوشی " + code(req.body.dev) + " برای " + esc(req.body.name) + " ساخته شد (" + esc(req.body.made) +
+    "). اگر هنوز نفرستاده‌اید، «فرستادن دوباره درخواست» را بزنید و فایل را با بله یا تلگرام برای مدیر بفرستید. بعد فایلی را که مدیر برمی‌گرداند پایین همین صفحه بارگذاری کنید.";
+  const un = records.filter(r => !r.sent).length + events.filter(e => !e.sent).length;
+  $("#enSend").hidden = !records.some(r => !r.sent);
+  $("#enSend").textContent = "فرستادن " + un + " ثبت و رویداد ارسال‌نشده به مدیر";
+  $("#enFp").innerHTML = "اثر انگشت این گوشی: " + code(devFp) + ". مدیر قبل از تأیید، همین را روی کامپیوتر می‌بیند." + (MGR ? "<br>کلید مدیر روی سایت: " + code(MGR.fp) : "");
+}
+async function shareEnroll(){
+  const req = settings.enroll; if (!req) return;
+  const name = "anbar_enroll_" + req.body.dev + ".txt";
+  const blob = new Blob([JSON.stringify(req)], {type: "text/plain"});
+  const file = new File([blob], name, {type: "text/plain"});
+  if (navigator.canShare && navigator.canShare({files: [file]})) {
+    try { await navigator.share({files: [file], title: name}); return; } catch(e) { if (e && e.name === "AbortError") return; }
+  }
+  download(blob, name);
+}
+$("#enMake").addEventListener("click", async () => {
+  const err = t => { const e = $("#enErr"); e.textContent = t; e.hidden = false; beep(false); };
+  const n = $("#enName").value.trim(), dv = norm($("#enDev").value).replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  const p1 = pinDigits($("#enPin").value), p2 = pinDigits($("#enPin2").value);
+  if (!n) { err("نام کارمند را بنویسید."); return; }
+  if (!dv) { err("کد گوشی را بنویسید، مثلاً A1."); return; }
+  if (p1.length < 4 || p1.length > 8) { err("رمز شخصی باید ۴ تا ۸ رقم باشد."); return; }
+  if (p1 !== p2) { err("رمز و تکرارش یکی نیستند."); return; }
+  settings.empPin = await WSC.pinHash(p1); settings.user = n; settings.device = dv;
+  const now = new Date();
+  const body = {kind: "wsc-enroll", v: 1, dev: dv, name: n, pub: devPub, fp: devFp, made: jDate(now) + " " + jTime(now).slice(0, 5), madeTs: now.toISOString(), app: APP_VER};
+  settings.enroll = await WSC.signObj(devKey.privateKey, body);
+  store(K_SET, settings);
+  logEvent("enroll", dv + " | " + n);
+  $("#enPin").value = ""; $("#enPin2").value = "";
+  showEnroll(); shareEnroll();
+});
+$("#enShare").addEventListener("click", shareEnroll);
+$("#enSend").addEventListener("click", async () => { await sendRows("unsent", false); showEnroll(); });
+$("#enRedo").addEventListener("click", () => { settings.enroll = null; store(K_SET, settings); showEnroll(); });
+// automatic lock after inactivity, and a fresh certificate check every minute
+["pointerdown", "keydown", "touchstart"].forEach(t => document.addEventListener(t, () => { sec.lastAct = Date.now(); }, {passive: true}));
+let lastCertCheck = Date.now();
+function idleLock(){
+  logEvent("auto_lock", (settings.idleMin || 30) + " دقیقه");
+  lockScreen("برنامه بعد از " + (settings.idleMin || 30) + " دقیقه بی‌کاری قفل شد. رمز شخصی را بزنید.", true);
+}
+setInterval(async () => {
+  if (!secOn() || sec.state !== "open") return;
+  if (Date.now() - sec.lastAct > idleMs()) { idleLock(); return; }
+  if (Date.now() - lastCertCheck > 60000) { lastCertCheck = Date.now(); if ((await certState()) !== "ok") secCheck(); }
+}, 15000);
+document.addEventListener("visibilitychange", () => {
+  if (!secOn()) return;
+  if (document.hidden) { sec.hiddenAt = Date.now(); return; }
+  if (sec.state === "open" && sec.hiddenAt && Date.now() - sec.hiddenAt > idleMs()) idleLock();
+});
+async function secBoot(){
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+  try { await ensureDevKey(); }
+  catch(e) { sec.state = "blocked:key"; lockScreen("کلید امنیتی این گوشی ساخته نشد. Chrome را به‌روز کنید و برنامه را از آدرس https باز کنید.", false); return; }
+  if (MGR && settings.mgrPub !== MGR.pub) {
+    if (settings.mgrPub) { logEvent("mgr_changed", WSC.fp(settings.mgrPub) + " → " + MGR.fp); settings.cert = null; settings.enroll = null; settings.mgrPinC = null; settings.revoked = []; }
+    settings.mgrPub = MGR.pub;
+  }
+  if (settings.devPub && settings.devPub !== devPub) { logEvent("key_new", WSC.fp(settings.devPub) + " → " + devFp); settings.cert = null; settings.enroll = null; }
+  settings.devPub = devPub;
+  if (settings.appVer !== APP_VER) { logEvent("update", (settings.appVer || "6") + " → " + APP_VER); settings.appVer = APP_VER; }
+  store(K_SET, settings);
+  logEvent("open", "");
+  const s = await secCheck();
+  if (s === "ok") lockScreen("رمز شخصی را بزنید.", true);
+}
+
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
-window.__wsc = {onScan, state: () => st, records: () => records, finishDoc, list: () => recList, sugItems, lineFlags, pkey, lkey};
+window.__wsc = {onScan, state: () => st, records: () => records, events: () => events, sec: () => sec, settings: () => settings, finishDoc, list: () => recList,
+  sugItems, lineFlags, pkey, lkey, devFp: () => devFp, certState, secCheck};
 if (DOC_MODES.has(st.mode)) st.step = "doc";
-if (!settings.user || !settings.pin) openSetup(false); else show("vScan");
-render();
+if (secOn()) { render(); secBoot(); }
+else {
+  if (!settings.user || !settings.pin) openSetup(false); else show("vScan");
+  render();
+}
 })();
 </script>
 </body>
