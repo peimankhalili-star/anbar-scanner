@@ -189,6 +189,19 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
     </div>
   </div>
 
+  <div class="card" id="addrCard" hidden>
+    <h2>ثبت آدرس قطعه‌ها</h2>
+    <p class="help" id="addrHelp"></p>
+    <details open><summary class="help">پیشرفت هر ردیف</summary>
+      <div class="tablewrap" style="max-height:40vh"><table><thead><tr><th>ردیف</th><th>شرکت</th><th>مکان‌ها</th><th>دیده‌شده</th><th>خالی</th><th>قلم ثبت‌شده</th><th>آخرین ثبت</th><th>کارمند</th></tr></thead><tbody id="addrRows"></tbody></table></div>
+    </details>
+    <div class="filters" style="grid-template-columns:2fr 1fr;margin-top:10px">
+      <div><label for="aText">جست‌وجوی کد قطعه، نام یا مکان</label><input id="aText" placeholder="S11-3502010 یا 16-3-C یا لنت"></div>
+      <div><p class="help" id="aShown" style="margin-top:28px"></p></div>
+    </div>
+    <div class="tablewrap" style="max-height:50vh"><table><thead><tr><th>کد فنی</th><th>نام قطعه</th><th>خودروها</th><th>آدرس</th><th>شرکت (از آدرس)</th><th>ثبت‌کننده</th><th>تاریخ</th><th>یادداشت</th></tr></thead><tbody id="aRows"></tbody></table></div>
+  </div>
+
   <div class="stats" id="stats" hidden>
     <div class="stat"><b id="stFiles">0</b>فایل</div>
     <div class="stat"><b id="stRows">0</b>ثبت</div>
@@ -255,6 +268,7 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
   </div>
 </main>
 <div id="printArea"></div>
+<script src="locations.js"></script>
 <script src="parts.js"></script>
 <script src="wsc-crypto.js"></script>
 <script src="manager.js"></script>
@@ -265,7 +279,7 @@ const $ = s => document.querySelector(s);
 const HEAD = ["شناسه","تاریخ","ساعت","زمان (ISO)","کارمند","دستگاه","عملیات","مکان","مکان مقصد","کد قطعه","تعداد","یادداشت",
   "شناسه سند","نوع سند","شماره پذیرش","شاسی","شماره مرجع","طرف","کانال سفارش"];
 const KEY = ["id","date","time","ts","user","device","mode","loc","toLoc","part","qty","note","doc","dtype","rec","chassis","ref","party","ch"];
-const M = {rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
+const M = {addr:"ثبت آدرس", rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
 let all = new Map(), fileNames = new Set(), dupCount = 0;
 
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -331,7 +345,8 @@ const EV_FA = {open: "باز شدن برنامه", unlock: "باز کردن قف
   list_load: "بارگذاری فهرست", cert_load: "بارگذاری مجوز", list_reject: "فایل بدون امضای مدیر رد شد", export: "ارسال فایل", clear_sent: "پاک کردن ثبت‌های ارسال‌شده",
   clock_back: "ساعت گوشی عقب کشیده شد", clock_reset: "تأیید ساعت گوشی با رمز مدیر", enroll: "درخواست مجوز", update: "نسخه برنامه عوض شد",
   expired: "مجوز تمام شد؛ گوشی قفل شد", revoked: "دسترسی قطع شد؛ گوشی قفل شد", cert_bad: "مجوز نامعتبر", key_new: "کلید گوشی عوض شد (پاک شدن داده‌های برنامه)",
-  mgr_changed: "کلید مدیر روی سایت عوض شد", list_old: "فایل قدیمی‌تر مدیر (بخش امنیتی‌اش اعمال نشد)"};
+  mgr_changed: "کلید مدیر روی سایت عوض شد", list_old: "فایل قدیمی‌تر مدیر (بخش امنیتی‌اش اعمال نشد)",
+  loc_done: "پایان ثبت آدرس یک مکان", loc_empty: "مکان خالی", undo: "برگشت آخرین ثبت آدرس"};
 const EV_ALERT = new Set(["void", "clock_back", "clock_reset", "pin_block", "mgr_fail", "list_reject", "key_new", "mgr_changed", "cert_bad", "pin_reset"]);
 const EV_NOTE = new Set(["void", "clock_back", "clock_reset", "pin_block", "pin_fail", "mgr_fail", "list_reject", "list_old", "key_new", "mgr_changed", "cert_bad", "pin_reset",
   "manual_qty", "rec_out", "revoked", "expired", "enroll", "update"]);
@@ -407,7 +422,7 @@ async function verifyAll(){
   for (const f of filesV) for (const e of f.entries) { const v = e.seq ? (e.v || "bad") : "none"; const c = best.get(e.id); if (c === undefined || rank[v] > rank[c]) best.set(e.id, v); }
   for (const r of all.values()) r.ver = best.get(r.id) || "none";
   for (const e of evAll.values()) e.ver = best.get(e.id) || "none";
-  const vset = new Set(Array.from(evAll.values()).filter(e => e.type === "void").map(e => e.info));
+  const vset = new Set(Array.from(evAll.values()).filter(e => e.type === "void" || e.type === "undo").map(e => e.info));
   for (const r of all.values()) r.void = vset.has(r.id);
   // noteworthy events, per phone
   const cnt = new Map();
@@ -513,6 +528,69 @@ function pinfo(pc){
   return {name: e[0], cars: e[1] ? e[1].split(",").map(i => WS_PARTS.m[+i]).join("، ") : ""};
 }
 
+// ---------- address recording: which part sits where, and how much of the warehouse has been covered ----------
+const LOCDATA = typeof WS_DATA !== "undefined" ? WS_DATA : {locations: [], companies: {}, rowOwner: {}, colOwner: {}};
+function locCompany(c){
+  const m = /^(\d{2})-(\d{1,2})-/.exec(c || "");
+  if (m) {
+    const col = (LOCDATA.colOwner || {})[m[1] + "-" + Number(m[2])];
+    const codes = col || (LOCDATA.rowOwner[m[1]] ? [LOCDATA.rowOwner[m[1]]] : []);
+    return codes.map(k => LOCDATA.companies[k] || k).join(" و ");
+  }
+  if (/^S\d/.test(c)) return "رک سپر";
+  if (/^HLD/.test(c)) return "رزرو پذیرش";
+  if (/^RCV/.test(c)) return "دریافت";
+  if (/^RTN/.test(c)) return "برگشتی و معیوب";
+  return "";
+}
+function locGroup(c){ const m = /^(\d{2})-/.exec(c); return m ? m[1] : (c.match(/^[A-Z]+/) || [""])[0]; }
+function addrData(){
+  const recs = Array.from(all.values()).filter(r => r.mode === M.addr && !r.void);
+  const pairs = new Map();                    // part + location, first record kept
+  recs.slice().sort((a, b) => a.ts < b.ts ? -1 : 1).forEach(r => { const k = r.part + "\u0001" + r.loc; if (!pairs.has(k)) pairs.set(k, r); });
+  const byPart = new Map(), byLoc = new Map();
+  for (const r of pairs.values()) {
+    if (!byPart.has(r.part)) byPart.set(r.part, []); byPart.get(r.part).push(r);
+    if (!byLoc.has(r.loc)) byLoc.set(r.loc, []); byLoc.get(r.loc).push(r);
+  }
+  // the latest «پایان مکان» or «مکان خالی» of each location
+  const mark = new Map();
+  Array.from(evAll.values()).filter(e => e.type === "loc_done" || e.type === "loc_empty").sort((a, b) => a.ts < b.ts ? -1 : 1)
+    .forEach(e => mark.set(String(e.info).split(" | ")[0], {type: e.type, user: e.user, date: e.date, time: e.time}));
+  const locs = LOCDATA.locations.slice();
+  for (const l of byLoc.keys()) if (!locs.includes(l)) locs.push(l);
+  const status = l => { const k = mark.get(l), n = (byLoc.get(l) || []).length;
+    return k && k.type === "loc_empty" && !n ? "خالی" : k ? "تمام‌شده" : n ? "در حال ثبت" : "دیده‌نشده"; };
+  return {recs, pairs: Array.from(pairs.values()), byPart, byLoc, mark, locs, status};
+}
+function renderAddr(){
+  const A = addrData();
+  $("#addrCard").hidden = !A.recs.length && !A.mark.size;
+  if ($("#addrCard").hidden) return;
+  const st = A.locs.map(A.status), total = LOCDATA.locations.length;
+  const seen = st.filter(x => x !== "دیده‌نشده").length, empty = st.filter(x => x === "خالی").length;
+  const multi = Array.from(A.byPart.values()).filter(v => v.length > 1).length;
+  const unknown = Array.from(A.byPart.keys()).filter(p => !pinfo(p).name).length;
+  const typed = A.pairs.filter(r => /تایپ دستی/.test(r.note)).length;
+  $("#addrHelp").innerHTML = "<b>" + A.byPart.size + "</b> قطعه با آدرس · " + seen + " مکان دیده‌شده از " + total + " (" + (total ? (seen && seen * 10 < total ? (100 * seen / total).toFixed(1) : Math.round(100 * seen / total)) : 0) + "٪)" +
+    " · " + empty + " مکان خالی · " + multi + " قطعه در بیش از یک مکان · " + unknown + " کد ناشناخته · " + typed + " ثبت با تایپ دستی";
+  const groups = new Map();
+  A.locs.forEach((l, i) => { const g = locGroup(l); if (!groups.has(g)) groups.set(g, {g, n: 0, seen: 0, empty: 0, parts: 0, users: new Set(), last: "", co: locCompany(l)});
+    const o = groups.get(g); o.n++; if (st[i] !== "دیده‌نشده") o.seen++; if (st[i] === "خالی") o.empty++;
+    (A.byLoc.get(l) || []).forEach(r => { o.parts++; o.users.add(r.user); if (r.date + " " + r.time > o.last) o.last = r.date + " " + r.time; });
+    const k = A.mark.get(l); if (k) { o.users.add(k.user); if (k.date + " " + k.time > o.last) o.last = k.date + " " + k.time; } });
+  $("#addrRows").innerHTML = Array.from(groups.values()).map(o => "<tr><td>" + code(o.g) + "</td><td>" + esc(o.co) + "</td><td>" + o.n + "</td><td>" + (o.seen === o.n ? '<span class="ok-t">' + o.seen + "</span>" : o.seen ? "<b>" + o.seen + "</b>" : "0") +
+    "</td><td>" + (o.empty || "") + "</td><td>" + (o.parts || "") + "</td><td>" + (o.last ? code(o.last.slice(0, 16)) : "") + "</td><td>" + esc(Array.from(o.users).join("، ")) + "</td></tr>").join("");
+  const t = normDigits($("#aText").value).toUpperCase().replace(/\s+/g, "");
+  const rows = Array.from(A.byPart.entries()).sort((a, b) => a[0] < b[0] ? -1 : 1)
+    .filter(([p, v]) => !t || p.includes(t) || v.some(r => r.loc.includes(t)) || pinfo(p).name.includes($("#aText").value.trim()));
+  $("#aShown").textContent = rows.length + " قطعه" + (rows.length > 800 ? "؛ ۸۰۰ تای اول نشان داده شده. همه در فایل Excel هست." : "");
+  $("#aRows").innerHTML = rows.slice(0, 800).map(([p, v]) => { const pi = pinfo(p);
+    return "<tr><td>" + code(p) + (pi.name ? "" : ' <span class="warn-t">ناشناخته</span>') + "</td><td>" + esc(pi.name) + "</td><td>" + esc(pi.cars) + "</td><td>" + v.map(r => code(r.loc)).join(" ") +
+      (v.length > 1 ? ' <span class="warn-t">' + v.length + " جا</span>" : "") + "</td><td>" + esc(Array.from(new Set(v.map(r => locCompany(r.loc)))).join("، ")) + "</td><td>" + esc(Array.from(new Set(v.map(r => r.user))).join("، ")) +
+      "</td><td>" + code(v[0].date) + "</td><td>" + esc(Array.from(new Set(v.map(r => r.note).filter(Boolean))).join("؛ ")) + "</td></tr>"; }).join("");
+}
+
 // ---------- view ----------
 function sorted(){ return Array.from(all.values()).sort((a, b) => a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0); }
 function filtered(){
@@ -554,7 +632,7 @@ function render(){
   $("#waitHelp").textContent = w.length + " ردیف. یعنی قطعه برای این پذیرش رسید خورده ولی اسکن تحویل به تعمیرگاه ندارد؛ یا هنوز در HLD است، یا بدون اسکن تحویل شده.";
   $("#waitRows").innerHTML = w.map(o => "<tr><td>" + code(o.rec) + "</td><td>" + (o.chassis ? code(o.chassis) : "") + "</td><td>" + code(o.part) + "</td><td>" + o.rcv + "</td><td>" + o.iss +
     "</td><td><b>" + o.left + "</b></td><td>" + esc(o.types) + "</td><td>" + code(o.last) + "</td></tr>").join("");
-  renderNeed(); renderAlerts(); renderEvents();
+  renderNeed(); renderAlerts(); renderEvents(); renderAddr();
   if (!any) return;
   $("#stFiles").textContent = fileNames.size;
   $("#stRows").textContent = recs.length;
@@ -570,7 +648,7 @@ function render(){
   const c = v => v ? code(v) : "";
   const vmark = r => r.ver === "bad" ? ' <span class="bad-t" title="امضا یا زنجیره درست نیست">⚠</span>' : r.ver === "none" && (MGRK || SITE_MGR) ? ' <span class="warn-t" title="بدون امضا">؟</span>' : "";
   $("#rows").innerHTML = rows.slice(0, LIMIT).map(r => "<tr" + (r.void ? ' class="void" title="حذف‌شده با رمز مدیر"' : "") + "><td>" + vmark(r) + code(r.date) + "</td><td>" + code(r.time) + "</td><td>" + esc(r.user) + "</td><td>" + esc(r.mode) +
-    "</td><td>" + esc(r.dtype) + "</td><td>" + c(r.rec) + "</td><td>" + c(r.chassis) + "</td><td>" + c(r.loc) + "</td><td>" + c(r.toLoc) + "</td><td>" + code(r.part) + "</td><td>" + esc(pinfo(r.part).name) + "</td><td>" + r.qty +
+    "</td><td>" + esc(r.dtype) + "</td><td>" + c(r.rec) + "</td><td>" + c(r.chassis) + "</td><td>" + c(r.loc) + "</td><td>" + c(r.toLoc) + "</td><td>" + code(r.part) + "</td><td>" + esc(pinfo(r.part).name) + "</td><td>" + (r.mode === M.addr ? "—" : r.qty) +
     "</td><td>" + c(r.ref) + "</td><td>" + c(r.doc) + "</td></tr>").join("");
 }
 
@@ -774,7 +852,7 @@ let MGRK = ld(K_MGR, null);
 let REG = ld(K_REG, null) || {devices: {}, settings: {certDays: 7, idleMin: 30, mgrPin: null}, log: []};
 let mgrPriv = null, mgrTimer = null, regTampered = false, pendingReq = [];
 const SITE_MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
-const MODE_LIST = [["rcv", "رسید"], ["put", "چیدن"], ["iss", "تحویل پذیرش"], ["out", "خروج"], ["ret", "برگشت"], ["move", "جابه‌جایی"], ["count", "شمارش"]];
+const MODE_LIST = [["addr", "ثبت آدرس"], ["rcv", "رسید"], ["put", "چیدن"], ["iss", "تحویل پذیرش"], ["out", "خروج"], ["ret", "برگشت"], ["move", "جابه‌جایی"], ["count", "شمارش"]];
 const ST_FA = {active: "فعال", revoked: "قطع‌شده", replaced: "جایگزین‌شده"};
 function nowMade(){ const d = new Date(); return jDate(d) + " " + d.toTimeString().slice(0, 5); }
 function verifyPub(){ return MGRK ? MGRK.pub : SITE_MGR ? SITE_MGR.pub : null; }
@@ -1248,6 +1326,24 @@ function buildXlsx(){
     filesV.forEach(f => al.push([f.name, f.dev || "", f.user || "", {ok: "سالم", bad: "دستکاری‌شده یا جعلی", none: "بدون امضا", nocert: "پیش از مجوز"}[f.status] || "", f.range || "", f.entries.length]));
     sheets.push({name: "هشدارهای امنیتی", rows: al, widths: [24, 110, 18, 18, 12, 8], headerRow: 0, freezeRows: 1});
   }
+  // addresses: one row per part and location, and the coverage of every location
+  const A = addrData();
+  if (A.recs.length || A.mark.size) {
+    const ar = [["کد فنی", "نام قطعه", "خودروها", "آدرس", "شرکت (از آدرس)", "تعداد آدرس این قطعه", "ثبت‌کننده", "گوشی", "تاریخ", "ساعت", "روش", "یادداشت", "در فهرست قطعات"]];
+    A.pairs.slice().sort((a, b) => a.part < b.part ? -1 : a.part > b.part ? 1 : a.loc < b.loc ? -1 : 1).forEach(r => {
+      const pi = pinfo(r.part);
+      ar.push([r.part, pi.name, pi.cars, r.loc, locCompany(r.loc), A.byPart.get(r.part).length, r.user, r.device, r.date, r.time, /تایپ دستی/.test(r.note) ? "تایپ دستی" : "اسکن", r.note, pi.name ? "بله" : "خیر"]);
+    });
+    const cov = [["مکان", "ردیف", "شرکت", "وضعیت", "تعداد قلم", "کارمند", "آخرین ثبت"]];
+    A.locs.forEach(l => {
+      const v = A.byLoc.get(l) || [], k = A.mark.get(l);
+      const users = Array.from(new Set(v.map(r => r.user).concat(k ? [k.user] : []))).join("، ");
+      const lastR = v.map(r => r.date + " " + r.time).concat(k ? [k.date + " " + k.time] : []).sort().pop() || "";
+      cov.push([l, locGroup(l), locCompany(l), A.status(l), v.length, users, lastR]);
+    });
+    sheets.splice(1, 0, {name: "آدرس قطعه‌ها", rows: ar, widths: [20, 30, 36, 10, 18, 10, 18, 8, 12, 10, 10, 30, 10], headerRow: 0, freezeRows: 1, filter: true},
+      {name: "پوشش مکان‌ها", rows: cov, widths: [10, 8, 20, 12, 10, 24, 18], headerRow: 0, freezeRows: 1, filter: true});
+  }
   // 7. open requests of the system against the scans (only when the open-requests file was loaded)
   if (listOut && listOut.need) {
     const nr = [["پذیرش", "شاسی", "کد قطعه", "عنوان قطعه", "درخواستی", "موجودی سیستم", "VOR / شماره سفارش", "رسید اسکن‌شده", "تحویل اسکن‌شده", "وضعیت"]]
@@ -1326,6 +1422,7 @@ $("#reqRows").addEventListener("click", e => {
 $("#devRows").addEventListener("click", e => { const b = e.target.closest("button[data-act]"); if (!b) return; const row = b.closest("tr"); devAction(row.dataset.fp, b.dataset.act, row); });
 $("#devRows").addEventListener("change", e => { if (!e.target.matches("input[data-m]")) return; const row = e.target.closest("tr"); devAction(row.dataset.fp, "modes", row); });
 ["#evDev", "#evType"].forEach(x => $(x).addEventListener("change", renderEvents));
+$("#aText").addEventListener("input", renderAddr);
 $("#evText").addEventListener("input", renderEvents);
 regCheck().then(renderSec);
 window.__rep = {addFile, all: () => all, render, verifyAll, alerts: () => alerts, events: () => evAll, files: () => filesV, reg: () => REG, mgr: () => MGRK, unlocked: () => !!mgrPriv, pending: () => pendingReq, readXlsx, loadX, list: () => listOut, buildXlsx, code128svg, waiting, needStatus, wscExport, bookmark: BOOKMARK, pkey, lkey};

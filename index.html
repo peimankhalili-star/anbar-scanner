@@ -62,7 +62,7 @@ main{padding:12px 12px 0;max-width:640px;margin:0 auto}
 .list .what small{display:block;color:var(--muted)}
 .tag{font-size:12px;border-radius:6px;padding:2px 8px;background:#F1EEE7;white-space:nowrap}
 .tag.put{background:#E3F3E7;color:#1E5A30}.tag.pick{background:#FBE9D4;color:#7A3E00}.tag.count{background:#E4ECF7;color:#1E3F70}.tag.move{background:#EFE4F7;color:#4E2A70}
-.tag.rcv{background:#D9F0E8;color:#0E5A43}.tag.iss{background:#FFE7C7;color:#7A3E00}.tag.out{background:#FBE4E7;color:#8A0A1F}.tag.ret{background:#E9E4F7;color:#3E2A78}
+.tag.addr{background:#FFF1C2;color:#6B4E00}.tag.rcv{background:#D9F0E8;color:#0E5A43}.tag.iss{background:#FFE7C7;color:#7A3E00}.tag.out{background:#FBE4E7;color:#8A0A1F}.tag.ret{background:#E9E4F7;color:#3E2A78}
 .sent{font-size:12px;color:var(--ok)}
 .del{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px;font-size:13px}
 .del.confirm{background:var(--err-bg);color:var(--err);border-color:#F2B8C0}
@@ -198,6 +198,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
   <!-- scan -->
   <section id="vScan" hidden>
     <div class="modes" role="group" aria-label="نوع کار">
+      <button data-mode="addr">ثبت آدرس</button>
       <button data-mode="rcv">رسید</button>
       <button data-mode="put">چیدن</button>
       <button data-mode="iss">تحویل پذیرش</button>
@@ -295,12 +296,23 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
         <button class="btn ghost" id="cancelPart" hidden>لغو قطعه</button>
         <button class="btn ghost" id="newLoc">مکان جدید</button>
       </div>
+      <div class="row" id="addrBtns" style="margin-top:10px" hidden>
+        <button class="btn accent" id="addrDone">پایان این مکان</button>
+        <button class="btn ghost" id="addrEmpty">مکان خالی است</button>
+      </div>
+      <button class="btn ghost small" id="addrUndo" style="margin-top:8px" hidden>برگشت آخرین ثبت</button>
       <label class="btn ghost" id="photoBtn" for="photoIn" style="display:block;text-align:center;margin-top:10px">اسکن با عکس (اگر دوربین زنده نخواند)</label>
       <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
       <form class="manual" id="manualForm" autocomplete="off">
         <input id="manual" placeholder="یا کد را تایپ کنید" enterkeyhint="done" aria-label="ورود دستی کد">
         <button class="btn" type="submit">ثبت</button>
       </form>
+    </div>
+
+    <div class="card" id="addrCard" hidden>
+      <div class="step" style="font-size:16px" id="addrTitle"></div>
+      <ul class="list" id="addrList"></ul>
+      <p class="help" id="addrToday"></p>
     </div>
 
     <div class="card">
@@ -379,7 +391,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1", K_LIST = "wsc.list.v1";
-const MODE_FA = {rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
+const MODE_FA = {addr:"ثبت آدرس", rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
 // Documents: every line of a receipt, delivery, issue or return carries the document's header.
 // rec: reception and chassis required; ref / party: "req" required, "opt" optional
 const TYPES = {
@@ -418,10 +430,10 @@ let records = load(K_REC, []);
 // works only with a certificate the manager signed; every record and every event is chained to the one
 // before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
 // tell a genuine, complete file from an edited, forged or partial one.
-const APP_VER = "7.0";
+const APP_VER = "8.0";
 const K_EV = "wsc.events.v1";
 const ZERO = "0".repeat(64);
-const ALL_MODES = ["rcv", "put", "iss", "out", "ret", "move", "count"];
+const ALL_MODES = ["addr", "rcv", "put", "iss", "out", "ret", "move", "count"];
 let events = load(K_EV, []);
 const MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
 function secOn(){ return !!(MGR || settings.mgrPub); }
@@ -450,7 +462,7 @@ function logEvent(type, info){
   store(K_SET, settings);
   return e;
 }
-function voided(){ return new Set(events.filter(e => e.type === "void").map(e => e.info)); }
+function voided(){ return new Set(events.filter(e => e.type === "void" || e.type === "undo").map(e => e.info)); }
 function liveRecords(){ const v = voided(); return records.filter(r => !v.has(r.id)); }
 // the phone's clock was turned back past the latest time it has already seen
 function clockBack(){ return (settings.maxTs || 0) - Date.now() > 10 * 60000; }
@@ -460,7 +472,9 @@ let st = {mode: settings.lastMode && MODE_FA[settings.lastMode] && settings.last
   hdr:{type:null, rec:null, ref:"", party:""},
   lastPart:null,  // last part code scanned in any mode: its name and cars are shown under the pills
   pending:null,   // receipt: part scanned before its reception was chosen; saved as the first line of the document
-  sug:null};      // receipt: receptions waiting for the pending part
+  sug:null,       // receipt: receptions waiting for the pending part
+  visit:null,     // address mode: {loc, n, ids} the location being recorded now
+  confirm:null};  // address mode: a typed code that is not in the parts list waits for a second identical entry
 
 // ---------- codes ----------
 function norm(s){
@@ -729,6 +743,7 @@ function onScan(raw, src){
   const c = classify(c0);
   if (c.kind === "badloc") { fail("کد " + code(c0) + " شبیه آدرس است، ولی در فهرست مکان‌های انبار نیست."); return; }
   if (c.kind === "part") st.lastPart = c.code;
+  if (st.mode === "addr") { addrFlow(c, src); render(); return; }
   if (st.mode === "move") { moveFlow(c); render(); return; }
   if (DOC_MODES.has(st.mode)) { docFlow(c); render(); return; }
   if (c.kind === "rec" || c.kind === "vin") { fail("این بارکد پذیرش است. برای رسید، تحویل یا برگشت، اول همان حالت را انتخاب کنید."); return; }
@@ -747,6 +762,55 @@ function onScan(raw, src){
   st.part = c.code; st.step = "qty"; st.manualQty = false; setQty(1);
   ok("قطعه " + code(c.code) + partName(c.code));
   render();
+}
+// ---------- address mode: which parts sit in which location (no quantities) ----------
+function addrAt(loc){ return liveRecords().filter(r => r.mode === "addr" && r.loc === loc); }
+function closeVisit(how){
+  const v = st.visit;
+  st.visit = null;
+  if (!v) return;
+  if (how === "empty") logEvent("loc_empty", v.loc);
+  else if (how === "done" || v.n) logEvent("loc_done", v.loc + " | " + addrAt(v.loc).length + " قلم");
+}
+function addrFlow(c, src){
+  if (c.kind === "rec" || c.kind === "vin") { fail("در ثبت آدرس فقط بارکد مکان و قطعه خوانده می‌شود."); return; }
+  if (c.kind === "loc") {
+    if (st.loc === c.code) { say("همین مکان باز است: " + code(c.code) + ". قطعه‌ها را اسکن کنید.", "info"); return; }
+    const prev = st.visit && st.visit.n ? st.visit.loc : null;
+    closeVisit("auto");
+    st.loc = c.code; st.step = "part"; st.confirm = null;
+    st.visit = {loc: c.code, n: 0, ids: []};
+    const had = addrAt(c.code).length;
+    ok((prev ? "مکان " + code(prev) + " تمام شد. " : "") + "مکان " + code(c.code) + " | " + esc(locLabel(c.code)) +
+      (had ? "<br>قبلاً " + had + " قلم در این مکان ثبت شده؛ فقط قطعه‌های تازه را اسکن کنید." : "<br>هر نوع قطعه را یک بار اسکن کنید."));
+    return;
+  }
+  if (!st.loc) { fail("اول بارکد مکان را اسکن کنید."); return; }
+  const pc = c.code, manual = src === "manual";
+  if (pc.length < 4 || !/[0-9]/.test(pc)) { fail("کد " + code(pc) + " کد فنی قطعه نیست."); return; }
+  if (addrAt(st.loc).some(r => r.part === pc)) { say("قطعه " + code(pc) + partName(pc) + " قبلاً در همین مکان ثبت شده است.", "info"); beep(true); return; }
+  const x = partLookup(pc);
+  if (!x && manual && st.confirm !== pc) {
+    st.confirm = pc;
+    fail("کد " + code(pc) + " در فهرست قطعات برنامه نیست. اگر درست تایپ شده، همین کد را یک بار دیگر بزنید تا ثبت شود.");
+    return;
+  }
+  st.confirm = null;
+  if (secOn() && (sec.state !== "open" || clockBack())) { if (sec.state === "open") secCheck(); return; }
+  const note = [manual ? "تایپ دستی" : "", !x ? "در فهرست قطعات نیست" : x.sim ? "کد مشابه در فهرست: " + x.code : ""].filter(Boolean).join("؛ ");
+  const rec = {id: settings.device + "-" + Date.now().toString(36) + rid(), ts: new Date().toISOString(),
+    user: settings.user, device: settings.device, mode: "addr", loc: st.loc, toLoc: "", part: pc, qty: 0, note,
+    doc: "", dtype: "", rec: "", chassis: "", ref: "", party: "", ch: "", sent: false};
+  const before = settings.chain;
+  chainNext(rec, "r", recPayload(rec));
+  records.push(rec);
+  if (!store(K_REC, records)) { records.pop(); settings.chain = before; fail("حافظه گوشی پر است؛ اول ثبت‌ها را بفرستید و پاک کنید."); return; }
+  store(K_SET, settings);
+  if (st.visit) { st.visit.n++; st.visit.ids.push(rec.id); }
+  const n = addrAt(st.loc).length;
+  const msg = "ثبت شد: " + code(pc) + (x ? " · " + esc(x.name) : "") + " در " + code(st.loc) + " (" + n + " قلم در این مکان)";
+  if (!x) { say(msg + "<br>این کد در فهرست قطعات برنامه نیست؛ برچسب را یک بار دیگر نگاه کنید.", "err"); beep(false); }
+  else ok(msg);
 }
 function addOne(){
   if (st.manualQty) { fail("تعداد این قلم دستی است. «ثبت این قلم» را بزنید، بعد قطعه بعدی."); return; }
@@ -847,6 +911,7 @@ function commit(note){
 }
 function setMode(m){
   if (m === st.mode) return;
+  if (st.mode === "addr") { closeVisit("auto"); st.confirm = null; }
   const closing = st.doc && st.doc.lines + (st.step === "qty" ? 1 : 0) ? st.doc.id : null;
   if (st.doc) { if (!finishDoc(true)) return; }
   else if (st.step === "qty" && st.mode !== "move" && !commit()) return;
@@ -868,6 +933,7 @@ function stepText(){
     if (st.step === "part") return "بارکد قطعه را اسکن کنید" + (st.mode === "rcv" ? "؛ مکان اختیاری است (مثلاً HLD یا RCV)" : st.mode === "ret" ? "" : "؛ مکان برداشت اختیاری است");
     return "هر بوق یعنی یک عدد. برای عدد بعدی گوشی را کمی دور و نزدیک کنید. قطعه دیگر یا «پایان سند»";
   }
+  if (st.mode === "addr") return st.step === "loc" ? "بارکد مکان را اسکن کنید" : "هر نوع قطعه این مکان را یک بار اسکن کنید. قطعه بی‌برچسب: کد فنی را پایین تایپ کنید";
   if (st.step === "loc") return mv ? "بارکد مکان مبدأ را اسکن کنید" : "بارکد مکان را اسکن کنید";
   if (st.step === "part") return "بارکد قطعه را اسکن کنید";
   if (mv) return "تعداد را بزنید، بعد بارکد مکان مقصد را اسکن کنید";
@@ -879,7 +945,7 @@ function recItem(r, withDel){
   const where = (r.loc ? code(r.loc) : "") + (r.toLoc ? " ← " + code(r.toLoc) : "");
   const head = (r.dtype ? esc(r.dtype) : "") + (r.rec ? " | پذیرش " + code(r.rec) : "") + (r.ref ? " | سند " + code(r.ref) : "");
   return '<li><span class="tag ' + esc(r.mode) + '">' + esc(MODE_FA[r.mode] || r.mode) + '</span>' +
-    '<div class="what">' + code(r.part) + " × " + r.qty + (partLookup(r.part) ? ' <span class="nm">' + esc(partLookup(r.part).name) + "</span>" : "") + "<small>" + (head ? head + " | " : "") + (where ? where + " | " : "") + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
+    '<div class="what">' + code(r.part) + (r.mode === "addr" ? "" : " × " + r.qty) + (partLookup(r.part) ? ' <span class="nm">' + esc(partLookup(r.part).name) + "</span>" : "") + "<small>" + (head ? head + " | " : "") + (where ? where + " | " : "") + esc(jDate(d)) + " " + esc(jTime(d)).slice(0,5) +
     (r.sent ? ' | <span class="sent">ارسال‌شده</span>' : "") + (r.note ? " | " + esc(r.note) : "") + "</small></div>" +
     (r.void ? '<span class="tag out">حذف‌شده</span>' : withDel ? '<button class="del" data-del="' + esc(r.id) + '">حذف</button>' : "") + "</li>";
 }
@@ -967,7 +1033,8 @@ function render(){
   $("#qManual").hidden = !auto || st.manualQty || st.step !== "qty";
   $("#cancelPart").hidden = st.step !== "qty" && !st.pending;
   $("#newLoc").textContent = isDoc ? "پاک کردن مکان" : "مکان جدید";
-  $("#newLoc").hidden = isDoc && !st.loc;
+  $("#newLoc").hidden = (isDoc && !st.loc) || st.mode === "addr";
+  renderAddr();
   $("#recent").innerHTML = records.slice(-5).reverse().map(r => recItem(r, false)).join("") || '<li class="help">هنوز ثبتی نیست.</li>';
   const list = records.filter(r => listFilter === "all" || (listFilter === "unsent" ? !r.sent : isToday(r.ts)));
   $("#allList").innerHTML = list.slice().reverse().map(r => recItem(r, true)).join("") || '<li class="help">چیزی برای نمایش نیست.</li>';
@@ -982,6 +1049,25 @@ function render(){
   $("#downloadAll").disabled = records.length + events.length === 0;
   renderListInfo();
   $("#aboutBox").innerHTML = aboutHtml();
+}
+function renderAddr(){
+  const on = st.mode === "addr";
+  $("#addrBtns").hidden = !on || !st.loc;
+  $("#addrCard").hidden = !on;
+  const last = on && st.visit && st.visit.ids.length ? records.find(r => r.id === st.visit.ids[st.visit.ids.length - 1]) : null;
+  $("#addrUndo").hidden = !last || !!last.void;
+  if (!on) return;
+  const here = st.loc ? addrAt(st.loc) : [];
+  $("#addrEmpty").hidden = here.length > 0;
+  $("#addrTitle").innerHTML = st.loc ? "قطعه‌های مکان " + code(st.loc) + ": " + here.length + " قلم" : "ثبت آدرس: اول بارکد مکان را اسکن کنید";
+  $("#addrList").innerHTML = here.slice().reverse().slice(0, 40).map(r => {
+    const x = partLookup(r.part);
+    return '<li><div class="what">' + code(r.part) + (x ? ' <span class="nm">' + esc(x.name) + "</span>" : ' <span class="warn">در فهرست نیست</span>') +
+      (r.note ? "<small>" + esc(r.note) + "</small>" : "") + "</div></li>";
+  }).join("") || (st.loc ? '<li class="help">هنوز قطعه‌ای در این مکان ثبت نشده است.</li>' : "");
+  const today = liveRecords().filter(r => r.mode === "addr" && isToday(r.ts));
+  const done = new Set(events.filter(e => (e.type === "loc_done" || e.type === "loc_empty") && isToday(e.ts)).map(e => e.info.split(" | ")[0]));
+  $("#addrToday").textContent = "امروز روی این گوشی: " + done.size + " مکان تمام‌شده، " + today.length + " قلم ثبت‌شده.";
 }
 function renderListInfo(){
   const n = listRows().length;
@@ -1239,6 +1325,31 @@ $("#photoIn").addEventListener("change", e => { const f = e.target.files && e.ta
 $("#camStop").addEventListener("click", stopCam);
 $("#torchBtn").addEventListener("click", () => { if (!track) return; torchOn = !torchOn; track.applyConstraints({advanced:[{torch: torchOn}]}).catch(() => {}); });
 $("#manualForm").addEventListener("submit", e => { e.preventDefault(); const v = $("#manual").value; $("#manual").value = ""; onScan(v, "manual"); });
+$("#addrDone").addEventListener("click", () => {
+  if (!st.loc) return;
+  const loc = st.loc, n = addrAt(loc).length;
+  if (!st.visit || st.visit.loc !== loc) st.visit = {loc, n: 0, ids: []};
+  closeVisit("done");
+  st.loc = null; st.step = "loc"; st.confirm = null;
+  ok("مکان " + code(loc) + " تمام شد: " + n + " قلم. بارکد مکان بعدی را اسکن کنید."); render();
+});
+$("#addrEmpty").addEventListener("click", e => twoTap(e.currentTarget, "خالی است؟ دوباره بزنید", () => {
+  if (!st.loc || addrAt(st.loc).length) return;
+  const loc = st.loc;
+  if (!st.visit || st.visit.loc !== loc) st.visit = {loc, n: 0, ids: []};
+  closeVisit("empty");
+  st.loc = null; st.step = "loc";
+  ok("مکان " + code(loc) + " خالی ثبت شد. بارکد مکان بعدی را اسکن کنید."); render();
+}));
+// the last part saved at this location was scanned by mistake: marked, not erased, and the manager sees it
+$("#addrUndo").addEventListener("click", () => {
+  const v = st.visit; if (!v || !v.ids.length) return;
+  const id = v.ids.pop(), r = records.find(x => x.id === id);
+  if (!r || voided().has(id)) return;
+  logEvent("undo", id);
+  v.n = Math.max(0, v.n - 1);
+  say("ثبت " + code(r.part) + " در " + code(r.loc) + " برگشت خورد.", "info"); render();
+});
 $("#qMinus").addEventListener("click", () => { setQty(st.qty - 1); render(); });
 $("#qPlus").addEventListener("click", () => { setQty(st.qty + 1); render(); });
 $("#qty").addEventListener("input", () => { const n = Math.floor(Number($("#qty").value)); if (n > 0) { st.qty = n; $("#pPartVal").innerHTML = st.part ? code(st.part) + " × " + n : "—"; } });
@@ -1655,7 +1766,7 @@ async function secBoot(){
 }
 
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
-window.__wsc = {onScan, state: () => st, records: () => records, events: () => events, sec: () => sec, settings: () => settings, finishDoc, list: () => recList,
+window.__wsc = {onScan, setMode, state: () => st, records: () => records, events: () => events, sec: () => sec, settings: () => settings, finishDoc, list: () => recList,
   sugItems, lineFlags, pkey, lkey, devFp: () => devFp, certState, secCheck};
 if (DOC_MODES.has(st.mode)) st.step = "doc";
 if (secOn()) { render(); secBoot(); }
