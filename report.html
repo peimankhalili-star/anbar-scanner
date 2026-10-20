@@ -865,6 +865,13 @@ let MGRK = ld(K_MGR, null);
 let REG = ld(K_REG, null) || {devices: {}, settings: {certDays: 7, idleMin: 30, mgrPin: null}, log: []};
 let mgrPriv = null, mgrTimer = null, regTampered = false, pendingReq = [];
 const SITE_MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
+// the manager key needs wsc-crypto.js next to this page; a copy opened from a folder on the computer keeps its own,
+// separate key store, so the page says so instead of letting a second manager key be made there
+const SEC_OK = typeof WSC !== "undefined";
+const SITE_REPORT = "https://peimankhalili-star.github.io/anbar-scanner/report.html";
+function whereNote(){
+  return location.protocol === "file:" ? '<br><span class="warn-t">این صفحه از روی پوشه کامپیوتر باز شده، نه از سایت. کلید مدیر و فهرست گوشی‌ها اینجا جدا از صفحه سایت نگه داشته می‌شود؛ صفحه گزارش را همیشه از نشانی سایت باز کنید: <a href="' + SITE_REPORT + '">' + SITE_REPORT + "</a></span>" : "";
+}
 const MODE_LIST = [["addr", "ثبت آدرس"], ["rcv", "رسید"], ["put", "چیدن"], ["iss", "تحویل پذیرش"], ["out", "خروج"], ["ret", "برگشت"], ["move", "جابه‌جایی"], ["count", "شمارش"]];
 const ST_FA = {active: "فعال", revoked: "قطع‌شده", replaced: "جایگزین‌شده"};
 function nowMade(){ const d = new Date(); return jDate(d) + " " + d.toTimeString().slice(0, 5); }
@@ -898,11 +905,25 @@ async function mgrCreate(){
   const p1 = $("#mkPass1").value, p2 = $("#mkPass2").value;
   if (p1.length < 10) { secMsg("رمز عبور مدیر باید دست‌کم ۱۰ حرف باشد.", "err"); return; }
   if (p1 !== p2) { secMsg("رمز عبور و تکرارش یکی نیستند.", "err"); return; }
+  if (!SEC_OK) { renderSec(); secMsg("این صفحه کامل نیست؛ صفحه گزارش را از نشانی سایت باز کنید.", "err"); return; }
+  // a key is already published: a new one would cut off every phone, and the backup file brings the old one back
+  if (SITE_MGR && !confirm("روی سایت از قبل manager.js با کلید مدیر " + SITE_MGR.fp + " هست.\n" +
+      "اگر کلید تازه بسازید، مجوز همه گوشی‌ها باطل می‌شود و باید manager.js تازه را در GitHub بگذارید.\n" +
+      "اگر فایل پشتیبان (anbar_manager_backup…json) دارید، به‌جای این کار «بازیابی» را بزنید.\n\nباز هم کلید تازه ساخته شود؟")) {
+    secMsg("کلید تازه ساخته نشد. برای برگرداندن کلید قبلی، در «بازیابی از فایل پشتیبان» فایل پشتیبان و رمز عبور مدیر را بدهید.", "ok"); return;
+  }
   secMsg("در حال ساخت کلید…", "ok");
-  const pair = await WSC.genKey(true), pub = await WSC.exportPub(pair);
-  MGRK = {v: 1, pub, fp: WSC.fp(pub), sealed: await WSC.sealPriv(pair.privateKey, p1), made: nowMade()};
-  sv(K_MGR, MGRK);
-  mgrPriv = await WSC.openPriv(MGRK.sealed, p1); armTimer();
+  try {
+    const pair = await WSC.genKey(true), pub = await WSC.exportPub(pair);
+    const k = {v: 1, pub, fp: WSC.fp(pub), sealed: await WSC.sealPriv(pair.privateKey, p1), made: nowMade()};
+    mgrPriv = await WSC.openPriv(k.sealed, p1);
+    MGRK = k;
+    if (!sv(K_MGR, MGRK)) throw new Error("مرورگر اجازه ذخیره نداد");
+  } catch(e) {
+    MGRK = ld(K_MGR, null); mgrPriv = null; renderSec();
+    secMsg("ساخت کلید مدیر نشد (" + esc(String(e && e.message || e)) + "). صفحه را از نشانی سایت در Chrome باز کنید و دوباره امتحان کنید.", "err"); return;
+  }
+  armTimer();
   $("#mkPass1").value = ""; $("#mkPass2").value = "";
   await regLog("mgr_create", MGRK.fp);
   downloadBackup(); downloadMgrJs(); renderSec();
@@ -918,7 +939,9 @@ async function mgrRestore(){
   MGRK = o.mgr; sv(K_MGR, MGRK);
   if (o.reg && o.reg.devices) REG = o.reg;
   armTimer(); await regLog("mgr_restore", MGRK.fp); await regCheck(); renderSec();
-  secMsg("کلید مدیر بازیابی شد (اثر انگشت " + code(MGRK.fp) + ").", "ok");
+  if (SITE_MGR && SITE_MGR.pub !== MGRK.pub) secMsg("کلید مدیر بازیابی شد (اثر انگشت " + code(MGRK.fp) + ")، ولی manager.js روی سایت کلید دیگری دارد (" + code(SITE_MGR.fp) + "). " +
+    "اگر فایل پشتیبان دیگری دارید، آن را امتحان کنید؛ وگرنه «دانلود manager.js» را بزنید و در GitHub جایگزین کنید.", "err");
+  else secMsg("کلید مدیر بازیابی شد (اثر انگشت " + code(MGRK.fp) + ")" + (SITE_MGR ? " و با manager.js روی سایت یکی است." : "."), "ok");
 }
 async function mgrUnlock(){
   try { mgrPriv = await WSC.openPriv(MGRK.sealed, $("#ulPass").value); }
@@ -973,7 +996,9 @@ function showQr(o, d){
   const qr = qrcode(0, "L"); qr.addData(text, "Byte"); qr.make();
   $("#qrImg").innerHTML = qr.createSvgTag({cellSize: 5, margin: 20, scalable: true});
   $("#qrTitle").innerHTML = "مجوز گوشی " + code(d.dev) + " · " + esc(d.name);
-  $("#qrInfo").innerHTML = "اثر انگشت گوشی " + code(d.fp) + " · فایل مجوز هم دانلود شد، اگر عکس کار نکرد همان را بفرستید.";
+  $("#qrInfo").innerHTML = "اثر انگشت گوشی " + code(d.fp) + " · فایل مجوز هم دانلود شد، اگر عکس کار نکرد همان را بفرستید." +
+    (SITE_MGR && SITE_MGR.pub !== MGRK.pub ? '<br><b class="bad-t">کلید مدیر این کامپیوتر (' + code(MGRK.fp) + ") با manager.js روی سایت (" + code(SITE_MGR.fp) +
+      ") یکی نیست؛ گوشی این مجوز را قبول نمی‌کند. اول «دانلود manager.js» را بزنید و در GitHub جایگزین کنید.</b>" : !SITE_MGR ? '<br><b class="bad-t">manager.js هنوز روی سایت نیست.</b>' : "");
   $("#qrBox").hidden = false;
 }
 async function addEnrollReq(o, fileName){
@@ -1016,10 +1041,16 @@ async function devAction(fp, act, row){
   await regSave(); renderSec();
 }
 function renderSec(){
+  if (!SEC_OK) {
+    $("#secSetup").hidden = true; $("#secMain").hidden = true;
+    $("#secStatus").innerHTML = '<span class="bad-t">این صفحه کامل نیست: فایل wsc-crypto.js کنارش نیست، پس کلید مدیر اینجا ساخته یا باز نمی‌شود.</span>' +
+      ' صفحه گزارش را از نشانی سایت باز کنید: <a href="' + SITE_REPORT + '">' + SITE_REPORT + "</a>";
+    return;
+  }
   $("#secSetup").hidden = !!MGRK; $("#secMain").hidden = !MGRK;
   if (!MGRK) {
     $("#secStatus").innerHTML = '<span class="warn-t">امنیت خاموش است.</span> تا کلید مدیر ساخته نشود و manager.js روی سایت نرود، گوشی‌ها مثل نسخه ۶ بدون مجوز کار می‌کنند.' +
-      (SITE_MGR ? '<br><span class="bad-t">روی سایت manager.js با کلید ' + code(SITE_MGR.fp) + " هست، ولی کلیدش روی این کامپیوتر نیست. از فایل پشتیبان بازیابی کنید.</span>" : "");
+      (SITE_MGR ? '<br><span class="bad-t">روی سایت manager.js با کلید ' + code(SITE_MGR.fp) + " هست، ولی کلیدش روی این کامپیوتر نیست. «ساخت کلید مدیر» را نزنید؛ با «بازیابی از فایل پشتیبان» همان کلید را برگردانید.</span>" : "") + whereNote();
     return;
   }
   const site = !SITE_MGR ? '<span class="warn-t">manager.js هنوز روی سایت نیست؛ تا آن را در GitHub نگذارید، امنیت گوشی‌ها روشن نمی‌شود.</span>'
@@ -1028,7 +1059,7 @@ function renderSec(){
   const devs = Object.values(REG.devices);
   $("#secStatus").innerHTML = "امنیت: " + (SITE_MGR && SITE_MGR.pub === MGRK.pub ? '<span class="ok-t">روشن</span>' : '<span class="warn-t">نیمه‌کاره</span>') + " · " +
     devs.filter(d => d.status === "active").length + " گوشی فعال، " + devs.filter(d => d.status !== "active").length + " قطع‌شده" +
-    (regTampered ? '<br><span class="bad-t">هشدار: فهرست گوشی‌ها روی این کامپیوتر بیرون از این صفحه تغییر کرده است.</span>' : "");
+    (regTampered ? '<br><span class="bad-t">هشدار: فهرست گوشی‌ها روی این کامپیوتر بیرون از این صفحه تغییر کرده است.</span>' : "") + whereNote();
   $("#mgrInfo").innerHTML = "اثر انگشت کلید مدیر: " + code(MGRK.fp) + " · ساخته‌شده " + code(MGRK.made) + "<br>" + site;
   $("#unlockBox").hidden = !!mgrPriv; $("#lockedBox").hidden = !mgrPriv;
   if (document.activeElement !== $("#setDays")) $("#setDays").value = REG.settings.certDays;
