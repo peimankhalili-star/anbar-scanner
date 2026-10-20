@@ -557,6 +557,9 @@ function locCompany(c){
   return "";
 }
 function locGroup(c){ const m = /^(\d{2})-/.exec(c); return m ? m[1] : (c.match(/^[A-Z]+/) || [""])[0]; }
+// a position label (fourth part, 16-1-A-03) on a crowded level counts toward its level; NC-0001… marks a part with no code
+const lvlOf = c => { const m = /^(\d{2}-\d-[A-E])-\d{2}$/.exec(c || ""); return m ? m[1] : c; };
+const NC_RE = /^NC-\d{4}$/, DENSE = 10;
 function addrData(){
   const recs = Array.from(all.values()).filter(r => r.mode === M.addr && !r.void);
   const pairs = new Map();                    // part + location, first record kept
@@ -570,11 +573,20 @@ function addrData(){
   const mark = new Map();
   Array.from(evAll.values()).filter(e => e.type === "loc_done" || e.type === "loc_empty").sort((a, b) => a.ts < b.ts ? -1 : 1)
     .forEach(e => mark.set(String(e.info).split(" | ")[0], {type: e.type, user: e.user, date: e.date, time: e.time}));
+  // per level, with its positions folded in
+  const byLvl = new Map(), pos = new Map(), markLvl = new Map();
+  for (const [l, v] of byLoc) { const L = lvlOf(l); if (!byLvl.has(L)) byLvl.set(L, []); byLvl.get(L).push(...v);
+    if (L !== l) { if (!pos.has(L)) pos.set(L, new Set()); pos.get(L).add(l.slice(-2)); } }
+  for (const [l, k] of mark) { const L = lvlOf(l), o = markLvl.get(L);
+    if (L !== l) { if (!pos.has(L)) pos.set(L, new Set()); pos.get(L).add(l.slice(-2)); }
+    if (!o || o.type === "loc_empty" || (k.date + k.time) > (o.date + o.time)) markLvl.set(L, k.type === "loc_empty" && o && o.type === "loc_done" ? o : k); }
   const locs = LOCDATA.locations.slice();
-  for (const l of byLoc.keys()) if (!locs.includes(l)) locs.push(l);
-  const status = l => { const k = mark.get(l), n = (byLoc.get(l) || []).length;
+  for (const l of byLvl.keys()) if (!locs.includes(l)) locs.push(l);
+  const types = l => new Set((byLvl.get(l) || []).map(r => r.part)).size;
+  const status = l => { const k = markLvl.get(l), n = (byLvl.get(l) || []).length;
     return k && k.type === "loc_empty" && !n ? "خالی" : k ? "تمام‌شده" : n ? "در حال ثبت" : "دیده‌نشده"; };
-  return {recs, pairs: Array.from(pairs.values()), byPart, byLoc, mark, locs, status};
+  const dense = l => !pos.has(l) && types(l) > DENSE;
+  return {recs, pairs: Array.from(pairs.values()), byPart, byLoc, byLvl, pos, mark: markLvl, locs, status, types, dense};
 }
 function renderAddr(){
   const A = addrData();
@@ -583,14 +595,18 @@ function renderAddr(){
   const st = A.locs.map(A.status), total = LOCDATA.locations.length;
   const seen = st.filter(x => x !== "دیده‌نشده").length, empty = st.filter(x => x === "خالی").length;
   const multi = Array.from(A.byPart.values()).filter(v => v.length > 1).length;
-  const unknown = Array.from(A.byPart.keys()).filter(p => !pinfo(p).name).length;
+  const unknown = Array.from(A.byPart.keys()).filter(p => !NC_RE.test(p) && !pinfo(p).name).length;
+  const ncs = Array.from(A.byPart.entries()).filter(([p]) => NC_RE.test(p)), ncTwice = ncs.filter(([, v]) => v.length > 1).length;
+  const denseN = A.locs.filter(A.dense).length;
   const typed = A.pairs.filter(r => /تایپ دستی/.test(r.note)).length;
   $("#addrHelp").innerHTML = "<b>" + A.byPart.size + "</b> قطعه با آدرس · " + seen + " مکان دیده‌شده از " + total + " (" + (total ? (seen && seen * 10 < total ? (100 * seen / total).toFixed(1) : Math.round(100 * seen / total)) : 0) + "٪)" +
-    " · " + empty + " مکان خالی · " + multi + " قطعه در بیش از یک مکان · " + unknown + " کد ناشناخته · " + typed + " ثبت با تایپ دستی";
+    " · " + empty + " مکان خالی · " + multi + " قطعه در بیش از یک مکان · " + unknown + " کد ناشناخته · " + typed + " ثبت با تایپ دستی" +
+    (ncs.length ? " · " + ncs.length + " قطعه بی‌کد (برچسب NC) برای شناسایی" + (ncTwice ? ' <span class="bad-t">(' + ncTwice + " برچسب NC در دو جا)</span>" : "") : "") +
+    (denseN ? ' · <span class="warn-t">' + denseN + " طبقه با بیش از " + DENSE + " نوع قطعه (نیاز به جایگاه‌بندی)</span>" : "");
   const groups = new Map();
   A.locs.forEach((l, i) => { const g = locGroup(l); if (!groups.has(g)) groups.set(g, {g, n: 0, seen: 0, empty: 0, parts: 0, users: new Set(), last: "", co: locCompany(l)});
     const o = groups.get(g); o.n++; if (st[i] !== "دیده‌نشده") o.seen++; if (st[i] === "خالی") o.empty++;
-    (A.byLoc.get(l) || []).forEach(r => { o.parts++; o.users.add(r.user); if (r.date + " " + r.time > o.last) o.last = r.date + " " + r.time; });
+    (A.byLvl.get(l) || []).forEach(r => { o.parts++; o.users.add(r.user); if (r.date + " " + r.time > o.last) o.last = r.date + " " + r.time; });
     const k = A.mark.get(l); if (k) { o.users.add(k.user); if (k.date + " " + k.time > o.last) o.last = k.date + " " + k.time; } });
   $("#addrRows").innerHTML = Array.from(groups.values()).map(o => "<tr><td>" + code(o.g) + "</td><td>" + esc(o.co) + "</td><td>" + o.n + "</td><td>" + (o.seen === o.n ? '<span class="ok-t">' + o.seen + "</span>" : o.seen ? "<b>" + o.seen + "</b>" : "0") +
     "</td><td>" + (o.empty || "") + "</td><td>" + (o.parts || "") + "</td><td>" + (o.last ? code(o.last.slice(0, 16)) : "") + "</td><td>" + esc(Array.from(o.users).join("، ")) + "</td></tr>").join("");
@@ -599,7 +615,7 @@ function renderAddr(){
     .filter(([p, v]) => !t || p.includes(t) || v.some(r => r.loc.includes(t)) || pinfo(p).name.includes($("#aText").value.trim()));
   $("#aShown").textContent = rows.length + " قطعه" + (rows.length > 800 ? "؛ ۸۰۰ تای اول نشان داده شده. همه در فایل Excel هست." : "");
   $("#aRows").innerHTML = rows.slice(0, 800).map(([p, v]) => { const pi = pinfo(p);
-    return "<tr><td>" + code(p) + (pi.name ? "" : ' <span class="warn-t">ناشناخته</span>') + "</td><td>" + esc(pi.name) + "</td><td>" + esc(pi.cars) + "</td><td>" + v.map(r => code(r.loc)).join(" ") +
+    return "<tr><td>" + code(p) + (NC_RE.test(p) ? ' <span class="warn-t">بی‌کد</span>' : pi.name ? "" : ' <span class="warn-t">ناشناخته</span>') + "</td><td>" + esc(NC_RE.test(p) ? "قطعه بی‌کد؛ باید شناسایی شود" : pi.name) + "</td><td>" + esc(pi.cars) + "</td><td>" + v.map(r => code(r.loc)).join(" ") +
       (v.length > 1 ? ' <span class="warn-t">' + v.length + " جا</span>" : "") + "</td><td>" + esc(Array.from(new Set(v.map(r => locCompany(r.loc)))).join("، ")) + "</td><td>" + esc(Array.from(new Set(v.map(r => r.user))).join("، ")) +
       "</td><td>" + code(v[0].date) + "</td><td>" + esc(Array.from(new Set(v.map(r => r.note).filter(Boolean))).join("؛ ")) + "</td></tr>"; }).join("");
 }
@@ -1388,17 +1404,18 @@ function buildXlsx(){
     const ar = [["کد فنی", "نام قطعه", "خودروها", "آدرس", "شرکت (از آدرس)", "تعداد آدرس این قطعه", "ثبت‌کننده", "گوشی", "تاریخ", "ساعت", "روش", "یادداشت", "در فهرست قطعات"]];
     A.pairs.slice().sort((a, b) => a.part < b.part ? -1 : a.part > b.part ? 1 : a.loc < b.loc ? -1 : 1).forEach(r => {
       const pi = pinfo(r.part);
-      ar.push([r.part, pi.name, pi.cars, r.loc, locCompany(r.loc), A.byPart.get(r.part).length, r.user, r.device, r.date, r.time, /تایپ دستی/.test(r.note) ? "تایپ دستی" : "اسکن", r.note, pi.name ? "بله" : "خیر"]);
+      const nc = NC_RE.test(r.part);
+      ar.push([r.part, nc ? "قطعه بی‌کد؛ باید شناسایی شود" : pi.name, pi.cars, r.loc, locCompany(r.loc), A.byPart.get(r.part).length, r.user, r.device, r.date, r.time, /تایپ دستی/.test(r.note) ? "تایپ دستی" : "اسکن", r.note, nc ? "بی‌کد" : pi.name ? "بله" : "خیر"]);
     });
-    const cov = [["مکان", "ردیف", "شرکت", "وضعیت", "تعداد قلم", "کارمند", "آخرین ثبت"]];
+    const cov = [["مکان", "ردیف", "شرکت", "وضعیت", "تعداد قلم", "کارمند", "آخرین ثبت", "جایگاه‌ها", "بیش از " + DENSE + " نوع"]];
     A.locs.forEach(l => {
-      const v = A.byLoc.get(l) || [], k = A.mark.get(l);
+      const v = A.byLvl.get(l) || [], k = A.mark.get(l);
       const users = Array.from(new Set(v.map(r => r.user).concat(k ? [k.user] : []))).join("، ");
       const lastR = v.map(r => r.date + " " + r.time).concat(k ? [k.date + " " + k.time] : []).sort().pop() || "";
-      cov.push([l, locGroup(l), locCompany(l), A.status(l), v.length, users, lastR]);
+      cov.push([l, locGroup(l), locCompany(l), A.status(l), A.types(l), users, lastR, A.pos.has(l) ? Array.from(A.pos.get(l)).sort().join("، ") : "", A.dense(l) ? "بله؛ جایگاه‌بندی شود" : ""]);
     });
     sheets.splice(1, 0, {name: "آدرس قطعه‌ها", rows: ar, widths: [20, 30, 36, 10, 18, 10, 18, 8, 12, 10, 10, 30, 10], headerRow: 0, freezeRows: 1, filter: true},
-      {name: "پوشش مکان‌ها", rows: cov, widths: [10, 8, 20, 12, 10, 24, 18], headerRow: 0, freezeRows: 1, filter: true});
+      {name: "پوشش مکان‌ها", rows: cov, widths: [10, 8, 20, 12, 10, 24, 18, 16, 18], headerRow: 0, freezeRows: 1, filter: true});
   }
   // 7. open requests of the system against the scans (only when the open-requests file was loaded)
   if (listOut && listOut.need) {

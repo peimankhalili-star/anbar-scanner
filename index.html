@@ -434,7 +434,7 @@ let records = load(K_REC, []);
 // works only with a certificate the manager signed; every record and every event is chained to the one
 // before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
 // tell a genuine, complete file from an edited, forged or partial one.
-const APP_VER = "8.3.1";
+const APP_VER = "8.4";
 const K_EV = "wsc.events.v1";
 const ZERO = "0".repeat(64);
 const ALL_MODES = ["addr", "rcv", "put", "iss", "out", "ret", "move", "count"];
@@ -490,8 +490,10 @@ function norm(s){
     .toUpperCase();
 }
 function classify(c){
-  const m = c.match(/^(\d{2})-(\d)-([A-E])(?:-(\d{2}))?$/);
-  if (m) return LOCS.has(m[1] + "-" + m[2] + "-" + m[3]) ? {kind:"loc", code:c} : {kind:"badloc", code:c};
+  // a fourth part is the position on a crowded level, always two digits: 16-1-A-3 typed by hand becomes 16-1-A-03
+  const m = c.match(/^(\d{2})-(\d)-([A-E])(?:-(\d{1,2}))?$/);
+  if (m) { const lv = m[1] + "-" + m[2] + "-" + m[3], cc = m[4] ? lv + "-" + m[4].padStart(2, "0") : lv;
+    return LOCS.has(lv) && cc.slice(-3) !== "-00" ? {kind:"loc", code:cc} : {kind:"badloc", code:cc}; }
   if (/^(HLD|RCV|RTN|VAL)-\d{2}$/.test(c)) return LOCS.has(c) ? {kind:"loc", code:c} : {kind:"badloc", code:c};
   if (/^S\d{1,2}-[A-E]$/.test(c)) return {kind:"loc", code:c};
   const r = c.match(/^R([0-9A-Z]{6,16})$/);                 // reception slip printed by the report page
@@ -768,6 +770,7 @@ function onScan(raw, src){
   render();
 }
 // ---------- address mode: which parts sit in which location (no quantities) ----------
+const NC_RE = /^NC-\d{4}$/, DENSE = 10;
 function addrAt(loc){ return liveRecords().filter(r => r.mode === "addr" && r.loc === loc); }
 function closeVisit(how){
   const v = st.visit;
@@ -793,15 +796,21 @@ function addrFlow(c, src){
   const pc = c.code, manual = src === "manual";
   if (pc.length < 4 || !/[0-9]/.test(pc)) { fail("کد " + code(pc) + " کد فنی قطعه نیست."); return; }
   if (addrAt(st.loc).some(r => r.part === pc)) { say("قطعه " + code(pc) + partName(pc) + " قبلاً در همین مکان ثبت شده است.", "info"); beep(true); return; }
-  const x = partLookup(pc);
-  if (!x && manual && st.confirm !== pc) {
+  // NC-0001…: numbered sticker put on a part that carries no code at all; each sticker belongs to one part only
+  const nc = NC_RE.test(pc);
+  if (nc) {
+    const other = liveRecords().find(r => r.mode === "addr" && r.part === pc && r.loc !== st.loc);
+    if (other) { fail("برچسب " + code(pc) + " قبلاً برای قطعه‌ای در " + code(other.loc) + " ثبت شده. هر برچسب بی‌کد فقط برای یک قطعه است؛ برچسب تازه بزنید."); return; }
+  }
+  const x = nc ? null : partLookup(pc);
+  if (!x && !nc && manual && st.confirm !== pc) {
     st.confirm = pc;
     fail("کد " + code(pc) + " در فهرست قطعات برنامه نیست. اگر درست تایپ شده، همین کد را یک بار دیگر بزنید تا ثبت شود.");
     return;
   }
   st.confirm = null;
   if (secOn() && (sec.state !== "open" || clockBack())) { if (sec.state === "open") secCheck(); return; }
-  const note = [manual ? "تایپ دستی" : "", !x ? "در فهرست قطعات نیست" : x.sim ? "کد مشابه در فهرست: " + x.code : ""].filter(Boolean).join("؛ ");
+  const note = [manual ? "تایپ دستی" : "", nc ? "بی‌کد؛ باید شناسایی شود" : !x ? "در فهرست قطعات نیست" : x.sim ? "کد مشابه در فهرست: " + x.code : ""].filter(Boolean).join("؛ ");
   const rec = {id: settings.device + "-" + Date.now().toString(36) + rid(), ts: new Date().toISOString(),
     user: settings.user, device: settings.device, mode: "addr", loc: st.loc, toLoc: "", part: pc, qty: 0, note,
     doc: "", dtype: "", rec: "", chassis: "", ref: "", party: "", ch: "", sent: false};
@@ -812,8 +821,10 @@ function addrFlow(c, src){
   store(K_SET, settings);
   if (st.visit) { st.visit.n++; st.visit.ids.push(rec.id); }
   const n = addrAt(st.loc).length;
-  const msg = "ثبت شد: " + code(pc) + (x ? " · " + esc(x.name) : "") + " در " + code(st.loc) + " (" + n + " قلم در این مکان)";
-  if (!x) { say(msg + "<br>این کد در فهرست قطعات برنامه نیست؛ برچسب را یک بار دیگر نگاه کنید.", "err"); beep(false); }
+  const msg = "ثبت شد: " + code(pc) + (x ? " · " + esc(x.name) : nc ? " · قطعه بی‌کد" : "") + " در " + code(st.loc) + " (" + n + " قلم در این مکان)" +
+    (n === DENSE + 1 ? "<br>این طبقه بیش از " + DENSE + " نوع قطعه دارد. ادامه بدهید؛ بعد از سرشماری جایگاه‌بندی می‌شود." : "");
+  if (nc) ok(msg + "<br>برچسب روی قطعه بماند؛ بعداً شناسایی می‌شود.");
+  else if (!x) { say(msg + "<br>این کد در فهرست قطعات برنامه نیست؛ برچسب را یک بار دیگر نگاه کنید.", "err"); beep(false); }
   else ok(msg);
 }
 function addOne(){
