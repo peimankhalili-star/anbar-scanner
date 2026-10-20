@@ -120,6 +120,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 </header>
 
 <main>
+  <div class="msg err" id="inAppWarn" hidden>این صفحه داخل یک برنامه دیگر (مثل بله یا تلگرام) باز شده است. اینجا اطلاعات برنامه نگه داشته نمی‌شود و هر بار مجوز از اول خواسته می‌شود. آدرس برنامه را در Chrome باز کنید و «نصب» را بزنید.</div>
   <!-- setup -->
   <section id="vSetup" hidden>
     <div class="card stack">
@@ -159,6 +160,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
       </div>
       <div id="enrollWait" class="stack" hidden>
         <p class="help" id="enWaitText"></p>
+        <label class="btn accent" for="qrIn" style="text-align:center;margin:0">اسکن مجوز از صفحه کامپیوتر</label>
         <button class="btn ghost" id="enShare">فرستادن دوباره درخواست</button>
         <button class="btn ghost small" id="enRedo">ساختن درخواست تازه</button>
       </div>
@@ -190,6 +192,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
       </div>
       <button class="btn ghost" id="lockClock" hidden>ساعت گوشی درست است؛ ادامه با رمز مدیر</button>
       <label class="btn ghost" for="secIn" style="text-align:center;margin:0">بارگذاری فایل فهرست یا مجوز</label>
+      <label class="btn ghost" for="qrIn" style="text-align:center;margin:0">اسکن مجوز از صفحه کامپیوتر</label>
       <button class="btn ghost" id="lockSend">فرستادن ثبت‌های ارسال‌نشده به مدیر</button>
       <p class="help" id="lockInfo"></p>
     </div>
@@ -364,6 +367,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 </main>
 
 <input type="file" id="secIn" accept=".json,.txt,application/json,text/plain" hidden>
+<input type="file" id="qrIn" accept="image/*" capture="environment" hidden>
 <div class="overlay" id="pinOverlay" hidden>
   <div class="card stack" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
     <div class="step" id="pinTitle">رمز مدیر</div>
@@ -430,12 +434,12 @@ let records = load(K_REC, []);
 // works only with a certificate the manager signed; every record and every event is chained to the one
 // before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
 // tell a genuine, complete file from an edited, forged or partial one.
-const APP_VER = "8.0";
+const APP_VER = "8.2";
 const K_EV = "wsc.events.v1";
 const ZERO = "0".repeat(64);
 const ALL_MODES = ["addr", "rcv", "put", "iss", "out", "ret", "move", "count"];
 let events = load(K_EV, []);
-const MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
+let MGR = typeof WS_MANAGER !== "undefined" && WS_MANAGER && WS_MANAGER.pub ? WS_MANAGER : null;
 function secOn(){ return !!(MGR || settings.mgrPub); }
 function mgrPub(){ return MGR ? MGR.pub : settings.mgrPub; }
 let devKey = null, devPub = "", devFp = "";
@@ -1215,16 +1219,20 @@ function showDiag(){
 }
 setInterval(showDiag, 700);
 // a still photo from the phone's camera app: full resolution and proper focus
+async function decodeImage(file){
+  await initDecoder();
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+  canvas.width = w; canvas.height = h; ctx.drawImage(bmp, 0, 0, w, h);
+  let text = detector ? await nativeScan(canvas, w, h) : null;
+  if (!text && wasmOk) text = await wasmScan(ctx.getImageData(0, 0, w, h));
+  return text;
+}
 async function scanPhoto(file){
   say("در حال خواندن عکس…", "info");
   try {
-    await initDecoder();
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
-    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
-    canvas.width = w; canvas.height = h; ctx.drawImage(bmp, 0, 0, w, h);
-    let text = detector ? await nativeScan(canvas, w, h) : null;
-    if (!text && wasmOk) text = await wasmScan(ctx.getImageData(0, 0, w, h));
+    const text = await decodeImage(file);
     if (text) onScan(text, "photo");
     else fail("در عکس بارکدی پیدا نشد. نزدیک‌تر، صاف‌تر و با نور بیشتر عکس بگیرید.");
   } catch(e) { fail("عکس خوانده نشد."); }
@@ -1404,8 +1412,22 @@ function note(t, bad){
 }
 // receptions list, certificate: in secure mode only files signed by the manager are accepted
 async function loadSigned(f){
+  let t = "";
+  try { t = await f.text(); } catch(err) { note("این فایل خوانده نشد.", true); return; }
+  return loadSignedText(t, f.name);
+}
+// a permit shown as a QR code on the manager's screen: a photo of it is read like the permit file
+async function loadQrPhoto(file){
+  note("در حال خواندن کد QR…", false);
+  let t = null;
+  try { t = await decodeImage(file); } catch(e) { t = null; }
+  if (!t || t.trim()[0] !== "{") { note("کد QR مجوز در عکس پیدا نشد. گوشی را صاف جلوی صفحه بگیرید، طوری که کل کد در عکس باشد، و دوباره عکس بگیرید.", true); return; }
+  return loadSignedText(t, "QR");
+}
+async function loadSignedText(text, fname){
+  const f = {name: fname};
   let o, old = false;
-  try { o = JSON.parse(await f.text()); } catch(err) { note("این فایل خوانده نشد.", true); return; }
+  try { o = JSON.parse(text); } catch(err) { note("این فایل خوانده نشد.", true); return; }
   if (!o || (o.kind !== "wsc-list" && o.kind !== "wsc-cert") || (o.kind === "wsc-list" && !Array.isArray(o.rows))) { note("این فایل، فایل فهرست یا مجوز نیست.", true); return; }
   if (secOn()) {
     const body = Object.assign({}, o); delete body.sig;
@@ -1455,6 +1477,7 @@ function applySec(x){
 }
 $("#listIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) loadSigned(f); });
 $("#secIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) loadSigned(f); });
+$("#qrIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) loadQrPhoto(f); });
 $("#allList").addEventListener("click", async e => {
   const b = e.target.closest("[data-del]"); if (!b) return;
   const id = b.dataset.del;
@@ -1694,8 +1717,9 @@ function showEnroll(){
   const req = settings.enroll;
   $("#enrollForm").hidden = !!req; $("#enrollWait").hidden = !req; $("#enErr").hidden = true;
   if (!req) { $("#enName").value = settings.user || ""; $("#enDev").value = settings.device || ""; }
-  else $("#enWaitText").innerHTML = "درخواست مجوز گوشی " + code(req.body.dev) + " برای " + esc(req.body.name) + " ساخته شد (" + esc(req.body.made) +
-    "). اگر هنوز نفرستاده‌اید، «فرستادن دوباره درخواست» را بزنید و فایل را با بله یا تلگرام برای مدیر بفرستید. بعد فایلی را که مدیر برمی‌گرداند پایین همین صفحه بارگذاری کنید.";
+  else $("#enWaitText").innerHTML = "درخواست مجوز گوشی " + code(req.body.dev) + " برای " + esc(req.body.name) + " ساخته شده است (" + esc(req.body.made) +
+    ") و منتظر تأیید مدیر است؛ <b>لازم نیست دوباره درخواست بدهید.</b><br>وقتی مدیر روی کامپیوتر «تأیید و صدور مجوز» را زد، کد QR روی صفحه‌اش می‌آید: «اسکن مجوز از صفحه کامپیوتر» را بزنید و از آن عکس بگیرید." +
+    "<br><small>اگر فایل درخواست به مدیر نرسیده، «فرستادن دوباره درخواست».</small>";
   const un = records.filter(r => !r.sent).length + events.filter(e => !e.sent).length;
   $("#enSend").hidden = !records.some(r => !r.sent);
   $("#enSend").textContent = "فرستادن " + un + " ثبت و رویداد ارسال‌نشده به مدیر";
@@ -1752,10 +1776,17 @@ async function secBoot(){
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
   try { await ensureDevKey(); }
   catch(e) { sec.state = "blocked:key"; lockScreen("کلید امنیتی این گوشی ساخته نشد. Chrome را به‌روز کنید و برنامه را از آدرس https باز کنید.", false); return; }
+  // a slow network can hand the phone an older, cached manager.js: a key made before the one this phone
+  // already follows is ignored, so the permit is not thrown away and the phone does not ask for a new one
+  if (MGR && settings.mgrPub && settings.mgrPub !== MGR.pub && settings.mgrMade && MGR.made && MGR.made < settings.mgrMade) {
+    logEvent("mgr_stale", MGR.fp + " | " + MGR.made); MGR = null;
+  }
   if (MGR && settings.mgrPub !== MGR.pub) {
-    if (settings.mgrPub) { logEvent("mgr_changed", WSC.fp(settings.mgrPub) + " → " + MGR.fp); settings.cert = null; settings.enroll = null; settings.mgrPinC = null; settings.revoked = []; }
+    // a new manager key: the permit must be signed again, the request made on this phone stays valid
+    if (settings.mgrPub) { logEvent("mgr_changed", WSC.fp(settings.mgrPub) + " → " + MGR.fp); settings.cert = null; settings.mgrPinC = null; settings.revoked = []; }
     settings.mgrPub = MGR.pub;
   }
+  if (MGR && MGR.made) settings.mgrMade = MGR.made;
   if (settings.devPub && settings.devPub !== devPub) { logEvent("key_new", WSC.fp(settings.devPub) + " → " + devFp); settings.cert = null; settings.enroll = null; }
   settings.devPub = devPub;
   if (settings.appVer !== APP_VER) { logEvent("update", (settings.appVer || "6") + " → " + APP_VER); settings.appVer = APP_VER; }
@@ -1766,6 +1797,8 @@ async function secBoot(){
 }
 
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
+// inside Bale, Telegram or another app's web view the app's storage is not kept between openings
+$("#inAppWarn").hidden = !/; wv\)|Telegram|Bale|Instagram|FBA[NV]/i.test(navigator.userAgent || "");
 window.__wsc = {onScan, setMode, state: () => st, records: () => records, events: () => events, sec: () => sec, settings: () => settings, finishDoc, list: () => recList,
   sugItems, lineFlags, pkey, lkey, devFp: () => devFp, certState, secCheck};
 if (DOC_MODES.has(st.mode)) st.step = "doc";
