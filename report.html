@@ -560,8 +560,11 @@ function locGroup(c){ const m = /^(\d{2})-/.exec(c); return m ? m[1] : (c.match(
 // a position label (fourth part, 16-1-A-03) on a crowded level counts toward its level; NC-0001… marks a part with no code
 const lvlOf = c => { const m = /^(\d{2}-\d-[A-E])-\d{2}$/.exec(c || ""); return m ? m[1] : c; };
 const NC_RE = /^NC-\d{4}$/, DENSE = 10;
+// the anti-counterfeit QR on Chery labels is a link; before 8.5 the phone could save it as a part code
+const isLink = s => /^(HTTPS?:\/\/|WWW\.)|:\/\//i.test(String(s || ""));
 function addrData(){
-  const recs = Array.from(all.values()).filter(r => r.mode === M.addr && !r.void);
+  const recs0 = Array.from(all.values()).filter(r => r.mode === M.addr && !r.void);
+  const recs = recs0.filter(r => !isLink(r.part)), links = recs0.length - recs.length;
   const pairs = new Map();                    // part + location, first record kept
   recs.slice().sort((a, b) => a.ts < b.ts ? -1 : 1).forEach(r => { const k = r.part + "\u0001" + r.loc; if (!pairs.has(k)) pairs.set(k, r); });
   const byPart = new Map(), byLoc = new Map();
@@ -586,11 +589,11 @@ function addrData(){
   const status = l => { const k = markLvl.get(l), n = (byLvl.get(l) || []).length;
     return k && k.type === "loc_empty" && !n ? "خالی" : k ? "تمام‌شده" : n ? "در حال ثبت" : "دیده‌نشده"; };
   const dense = l => !pos.has(l) && types(l) > DENSE;
-  return {recs, pairs: Array.from(pairs.values()), byPart, byLoc, byLvl, pos, mark: markLvl, locs, status, types, dense};
+  return {recs, links, pairs: Array.from(pairs.values()), byPart, byLoc, byLvl, pos, mark: markLvl, locs, status, types, dense};
 }
 function renderAddr(){
   const A = addrData();
-  $("#addrCard").hidden = !A.recs.length && !A.mark.size;
+  $("#addrCard").hidden = !A.recs.length && !A.mark.size && !A.links;
   if ($("#addrCard").hidden) return;
   const st = A.locs.map(A.status), total = LOCDATA.locations.length;
   const seen = st.filter(x => x !== "دیده‌نشده").length, empty = st.filter(x => x === "خالی").length;
@@ -602,6 +605,7 @@ function renderAddr(){
   $("#addrHelp").innerHTML = "<b>" + A.byPart.size + "</b> قطعه با آدرس · " + seen + " مکان دیده‌شده از " + total + " (" + (total ? (seen && seen * 10 < total ? (100 * seen / total).toFixed(1) : Math.round(100 * seen / total)) : 0) + "٪)" +
     " · " + empty + " مکان خالی · " + multi + " قطعه در بیش از یک مکان · " + unknown + " کد ناشناخته · " + typed + " ثبت با تایپ دستی" +
     (ncs.length ? " · " + ncs.length + " قطعه بی‌کد (برچسب NC) برای شناسایی" + (ncTwice ? ' <span class="bad-t">(' + ncTwice + " برچسب NC در دو جا)</span>" : "") : "") +
+    (A.links ? ' · <span class="warn-t">' + A.links + " اسکن QR ضدتقلب (لینک) کنار گذاشته شد</span>" : "") +
     (denseN ? ' · <span class="warn-t">' + denseN + " طبقه با بیش از " + DENSE + " نوع قطعه (نیاز به جایگاه‌بندی)</span>" : "");
   const groups = new Map();
   A.locs.forEach((l, i) => { const g = locGroup(l); if (!groups.has(g)) groups.set(g, {g, n: 0, seen: 0, empty: 0, parts: 0, users: new Set(), last: "", co: locCompany(l)});

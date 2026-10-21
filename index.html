@@ -434,7 +434,7 @@ let records = load(K_REC, []);
 // works only with a certificate the manager signed; every record and every event is chained to the one
 // before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
 // tell a genuine, complete file from an edited, forged or partial one.
-const APP_VER = "8.4";
+const APP_VER = "8.5";
 const K_EV = "wsc.events.v1";
 const ZERO = "0".repeat(64);
 const ALL_MODES = ["addr", "rcv", "put", "iss", "out", "ret", "move", "count"];
@@ -489,6 +489,9 @@ function norm(s){
     .replace(/[\s‌-‏]+/g, "")
     .toUpperCase();
 }
+// a link, such as the anti-counterfeit QR next to the part barcode on Chery labels (http://cx.panpass.com/?fw=…),
+// is never a part code or a location
+const isLink = s => /^(HTTPS?:\/\/|WWW\.)|:\/\//i.test(String(s || ""));
 function classify(c){
   // a fourth part is the position on a crowded level, always two digits: 16-1-A-3 typed by hand becomes 16-1-A-03
   const m = c.match(/^(\d{2})-(\d)-([A-E])(?:-(\d{1,2}))?$/);
@@ -746,6 +749,7 @@ function onScan(raw, src){
   sec.lastAct = Date.now();
   const c0 = norm(raw);
   if (!c0) return;
+  if (isLink(c0)) { fail("این QR ضدتقلب (یک لینک) است، نه کد فنی؛ ثبت نشد. دوربین را روی <b>بارکد خطی</b> کنار آن بگیرید."); return; }
   const c = classify(c0);
   if (c.kind === "badloc") { fail("کد " + code(c0) + " شبیه آدرس است، ولی در فهرست مکان‌های انبار نیست."); return; }
   if (c.kind === "part") st.lastPart = c.code;
@@ -1192,9 +1196,9 @@ async function nativeScan(src, w, h){
     const r = await detector.detect(src);
     nativeErrors = 0;
     if (!r.length) return null;
-    // several codes in view: take the one nearest the centre
+    // several codes in view: a real code before a link (the anti-counterfeit QR), then the one nearest the centre
     const dist = b => { const x = b.boundingBox.x + b.boundingBox.width / 2, y = b.boundingBox.y + b.boundingBox.height / 2; return (x - w / 2) ** 2 + (y - h / 2) ** 2; };
-    return r.slice().sort((a, b) => dist(a) - dist(b))[0].rawValue;
+    return r.slice().sort((a, b) => isLink(a.rawValue) - isLink(b.rawValue) || dist(a) - dist(b))[0].rawValue;
   } catch(e) {
     nativeErrors++; diag.err = "phone reader: " + (e && e.name);
     if (nativeErrors >= 3) detector = null;
@@ -1202,8 +1206,8 @@ async function nativeScan(src, w, h){
   }
 }
 async function wasmScan(imageData){
-  const res = await ZXingWASM.readBarcodes(imageData, {tryHarder: true, maxNumberOfSymbols: 1});
-  const ok = res.find(r => r.isValid && r.text);
+  const res = await ZXingWASM.readBarcodes(imageData, {tryHarder: true, maxNumberOfSymbols: 3});
+  const ok = res.filter(r => r.isValid && r.text).sort((a, b) => isLink(a.text) - isLink(b.text))[0];
   return ok ? ok.text : null;
 }
 async function scanFrame(){
@@ -1237,7 +1241,7 @@ async function decodeImage(file){
   const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
   canvas.width = w; canvas.height = h; ctx.drawImage(bmp, 0, 0, w, h);
   let text = detector ? await nativeScan(canvas, w, h) : null;
-  if (!text && wasmOk) text = await wasmScan(ctx.getImageData(0, 0, w, h));
+  if ((!text || isLink(text)) && wasmOk) { const t2 = await wasmScan(ctx.getImageData(0, 0, w, h)); if (t2 && (!text || !isLink(t2))) text = t2; }
   return text;
 }
 async function scanPhoto(file){
@@ -1347,6 +1351,7 @@ $("#manualForm").addEventListener("submit", e => { e.preventDefault(); const v =
 $("#addrDone").addEventListener("click", () => {
   if (!st.loc) return;
   const loc = st.loc, n = addrAt(loc).length;
+  if (!n) { fail("در " + code(loc) + " هنوز قطعه‌ای ثبت نشده. قطعه‌ها را اسکن کنید؛ اگر مکان خالی است، «مکان خالی است» را بزنید."); return; }
   if (!st.visit || st.visit.loc !== loc) st.visit = {loc, n: 0, ids: []};
   closeVisit("done");
   st.loc = null; st.step = "loc"; st.confirm = null;
