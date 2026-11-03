@@ -601,9 +601,9 @@ function renderAddr(){
   const unknown = Array.from(A.byPart.keys()).filter(p => !NC_RE.test(p) && !pinfo(p).name).length;
   const ncs = Array.from(A.byPart.entries()).filter(([p]) => NC_RE.test(p)), ncTwice = ncs.filter(([, v]) => v.length > 1).length;
   const denseN = A.locs.filter(A.dense).length;
-  const typed = A.pairs.filter(r => /تایپ دستی/.test(r.note)).length;
+  const typed = A.pairs.filter(r => /تایپ دستی/.test(r.note)).length, ocrN = A.pairs.filter(r => /خوانده از متن/.test(r.note)).length;
   $("#addrHelp").innerHTML = "<b>" + A.byPart.size + "</b> قطعه با آدرس · " + seen + " مکان دیده‌شده از " + total + " (" + (total ? (seen && seen * 10 < total ? (100 * seen / total).toFixed(1) : Math.round(100 * seen / total)) : 0) + "٪)" +
-    " · " + empty + " مکان خالی · " + multi + " قطعه در بیش از یک مکان · " + unknown + " کد ناشناخته · " + typed + " ثبت با تایپ دستی" +
+    " · " + empty + " مکان خالی · " + multi + " قطعه در بیش از یک مکان · " + unknown + " کد ناشناخته · " + typed + " ثبت با تایپ دستی" + (ocrN ? " · " + ocrN + " ثبت با خواندن متن برچسب" : "") +
     (ncs.length ? " · " + ncs.length + " قطعه بی‌کد (برچسب NC) برای شناسایی" + (ncTwice ? ' <span class="bad-t">(' + ncTwice + " برچسب NC در دو جا)</span>" : "") : "") +
     (A.links ? ' · <span class="warn-t">' + A.links + " اسکن QR ضدتقلب (لینک) کنار گذاشته شد</span>" : "") +
     (denseN ? ' · <span class="warn-t">' + denseN + " طبقه با بیش از " + DENSE + " نوع قطعه (نیاز به جایگاه‌بندی)</span>" : "");
@@ -1409,7 +1409,7 @@ function buildXlsx(){
     A.pairs.slice().sort((a, b) => a.part < b.part ? -1 : a.part > b.part ? 1 : a.loc < b.loc ? -1 : 1).forEach(r => {
       const pi = pinfo(r.part);
       const nc = NC_RE.test(r.part);
-      ar.push([r.part, nc ? "قطعه بی‌کد؛ باید شناسایی شود" : pi.name, pi.cars, r.loc, locCompany(r.loc), A.byPart.get(r.part).length, r.user, r.device, r.date, r.time, /تایپ دستی/.test(r.note) ? "تایپ دستی" : "اسکن", r.note, nc ? "بی‌کد" : pi.name ? "بله" : "خیر"]);
+      ar.push([r.part, nc ? "قطعه بی‌کد؛ باید شناسایی شود" : pi.name, pi.cars, r.loc, locCompany(r.loc), A.byPart.get(r.part).length, r.user, r.device, r.date, r.time, /تایپ دستی/.test(r.note) ? "تایپ دستی" : /خوانده از متن/.test(r.note) ? "خواندن متن" : "اسکن", r.note, nc ? "بی‌کد" : pi.name ? "بله" : "خیر"]);
     });
     const cov = [["مکان", "ردیف", "شرکت", "وضعیت", "تعداد قلم", "کارمند", "آخرین ثبت", "جایگاه‌ها", "بیش از " + DENSE + " نوع"]];
     A.locs.forEach(l => {

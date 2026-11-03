@@ -50,6 +50,10 @@ main{padding:12px 12px 0;max-width:640px;margin:0 auto}
 .row{display:flex;gap:8px;align-items:center}
 .row > *{flex:1}
 .manual{display:flex;gap:8px;margin-top:10px}
+.ocrbox{margin-top:10px;border:2px solid var(--accent);border-radius:12px;padding:10px;background:#FFFBEA}
+.ocrbox .ocrc{display:block;width:100%;text-align:right;margin-top:8px;background:var(--card);line-height:1.6}
+.ocrbox .ocrc.best{border:2px solid var(--ok);background:var(--ok-bg)}
+.ocrbox .ocrc small{display:block;font-weight:400;color:var(--muted)}
 .manual input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;direction:ltr;text-align:left}
 .msg{border-radius:12px;padding:10px 12px;margin-bottom:10px;font-weight:700;min-height:44px}
 .msg.ok{background:var(--ok-bg);color:var(--ok)}
@@ -306,6 +310,13 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
       <button class="btn ghost small" id="addrUndo" style="margin-top:8px" hidden>برگشت آخرین ثبت</button>
       <label class="btn ghost" id="photoBtn" for="photoIn" style="display:block;text-align:center;margin-top:10px">اسکن با عکس (اگر دوربین زنده نخواند)</label>
       <input type="file" id="photoIn" accept="image/*" capture="environment" hidden>
+      <button class="btn" id="ocrBtn" type="button" style="display:block;width:100%;margin-top:10px">خواندن کد فنی از متن برچسب (بارکد خراب)</button>
+      <input type="file" id="ocrIn" accept="image/*" capture="environment" hidden>
+      <div class="ocrbox" id="ocrBox" hidden>
+        <div id="ocrTitle" style="font-weight:700"></div>
+        <div id="ocrList"></div>
+        <button class="btn ghost small" id="ocrNone" type="button" style="margin-top:8px">هیچ‌کدام درست نیست؛ خودم تایپ می‌کنم</button>
+      </div>
       <form class="manual" id="manualForm" autocomplete="off">
         <input id="manual" placeholder="یا کد را تایپ کنید" enterkeyhint="done" aria-label="ورود دستی کد">
         <button class="btn" type="submit">ثبت</button>
@@ -394,7 +405,7 @@ nav button[aria-current=page]{color:var(--ink);box-shadow:inset 0 3px 0 var(--ac
 "use strict";
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
-const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1", K_LIST = "wsc.list.v1";
+const K_REC = "wsc.records.v1", K_SET = "wsc.settings.v1", K_LIST = "wsc.list.v1", K_OCR = "wsc.ocr.v1";
 const MODE_FA = {addr:"ثبت آدرس", rcv:"رسید", put:"چیدن", iss:"تحویل پذیرش", out:"خروج", ret:"برگشت از تعمیرگاه", pick:"برداشت", count:"شمارش", move:"جابه‌جایی"};
 // Documents: every line of a receipt, delivery, issue or return carries the document's header.
 // rec: reception and chassis required; ref / party: "req" required, "opt" optional
@@ -434,7 +445,7 @@ let records = load(K_REC, []);
 // works only with a certificate the manager signed; every record and every event is chained to the one
 // before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
 // tell a genuine, complete file from an edited, forged or partial one.
-const APP_VER = "8.5";
+const APP_VER = "8.6";
 const K_EV = "wsc.events.v1";
 const ZERO = "0".repeat(64);
 const ALL_MODES = ["addr", "rcv", "put", "iss", "out", "ret", "move", "count"];
@@ -814,7 +825,7 @@ function addrFlow(c, src){
   }
   st.confirm = null;
   if (secOn() && (sec.state !== "open" || clockBack())) { if (sec.state === "open") secCheck(); return; }
-  const note = [manual ? "تایپ دستی" : "", nc ? "بی‌کد؛ باید شناسایی شود" : !x ? "در فهرست قطعات نیست" : x.sim ? "کد مشابه در فهرست: " + x.code : ""].filter(Boolean).join("؛ ");
+  const note = [manual ? "تایپ دستی" : src === "ocr" ? "خوانده از متن" : "", nc ? "بی‌کد؛ باید شناسایی شود" : !x ? "در فهرست قطعات نیست" : x.sim ? "کد مشابه در فهرست: " + x.code : ""].filter(Boolean).join("؛ ");
   const rec = {id: settings.device + "-" + Date.now().toString(36) + rid(), ts: new Date().toISOString(),
     user: settings.user, device: settings.device, mode: "addr", loc: st.loc, toLoc: "", part: pc, qty: 0, note,
     doc: "", dtype: "", rec: "", chassis: "", ref: "", party: "", ch: "", sent: false};
@@ -952,7 +963,7 @@ function stepText(){
     if (st.step === "part") return "بارکد قطعه را اسکن کنید" + (st.mode === "rcv" ? "؛ مکان اختیاری است (مثلاً HLD یا RCV)" : st.mode === "ret" ? "" : "؛ مکان برداشت اختیاری است");
     return "هر بوق یعنی یک عدد. برای عدد بعدی گوشی را کمی دور و نزدیک کنید. قطعه دیگر یا «پایان سند»";
   }
-  if (st.mode === "addr") return st.step === "loc" ? "بارکد مکان را اسکن کنید" : "هر نوع قطعه این مکان را یک بار اسکن کنید. قطعه بی‌برچسب: کد فنی را پایین تایپ کنید";
+  if (st.mode === "addr") return st.step === "loc" ? "بارکد مکان را اسکن کنید" : "هر نوع قطعه این مکان را یک بار اسکن کنید. بارکد خراب: «خواندن کد فنی از متن برچسب»";
   if (st.step === "loc") return mv ? "بارکد مکان مبدأ را اسکن کنید" : "بارکد مکان را اسکن کنید";
   if (st.step === "part") return "بارکد قطعه را اسکن کنید";
   if (mv) return "تعداد را بزنید، بعد بارکد مکان مقصد را اسکن کنید";
@@ -1234,6 +1245,114 @@ function showDiag(){
 }
 setInterval(showDiag, 700);
 // a still photo from the phone's camera app: full resolution and proper focus
+// ---------- the printed technical code, for labels whose barcode is damaged ----------
+// Tesseract (files in ocr/, kept on the phone after the first use) reads the label's text. Every word is matched
+// against the parts list, allowing for the letters it mixes up (0/O, 1/I, 5/S, 8/B, 2/Z, 6/G); nothing is saved
+// until the colleague taps the right code. A code that is not in the list goes to the typing box to be checked.
+let ocrWorker = null, ocrLoading = null, ocrIndex = null, ocrBusy = false;
+const OCR_MIX = ["0OQD", "1IL", "5S", "8B", "2Z", "6G", "4A", "7T"];
+function loadScript(src){ return new Promise((res, rej) => { const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = () => rej(new Error(src)); document.head.appendChild(el); }); }
+function ocrInit(){
+  if (ocrWorker) return Promise.resolve(ocrWorker);
+  if (!ocrLoading) ocrLoading = (async () => {
+    if (typeof Tesseract === "undefined") await loadScript("ocr/tesseract.min.js");
+    const base = new URL("ocr/", location.href).href;
+    const w = await Tesseract.createWorker("eng", 1, {workerPath: base + "worker.min.js", corePath: base, langPath: base, gzip: true, workerBlobURL: false});
+    await w.setParameters({tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-", tessedit_pageseg_mode: "11", user_defined_dpi: "300"});
+    store(K_OCR, "1");
+    ocrWorker = w; return w;
+  })().catch(e => { ocrLoading = null; throw e; });
+  return ocrLoading;
+}
+// the part of the picture inside the camera guide, grey, stretched and large enough for small print
+function ocrCanvas(src){
+  const sw = src.videoWidth || src.width, sh = src.videoHeight || src.height;
+  const live = !!src.videoWidth;
+  const cw = live ? Math.round(sw * 0.92) : sw, ch = live ? Math.round(sh * 0.6) : sh;
+  const k = Math.min(3, Math.max(1, 1600 / cw), 2400 / Math.max(cw, ch));
+  const c = document.createElement("canvas"); c.width = Math.round(cw * k); c.height = Math.round(ch * k);
+  const g = c.getContext("2d", {willReadFrequently: true});
+  g.imageSmoothingQuality = "high";
+  g.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, c.width, c.height);
+  const im = g.getImageData(0, 0, c.width, c.height), d = im.data, hist = new Uint32Array(256);
+  for (let i = 0; i < d.length; i += 4) { const y = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000 | 0; d[i] = y; hist[y]++; }
+  const n = d.length / 4; let lo = 0, hi = 255, acc = 0;
+  for (; lo < 255 && (acc += hist[lo]) < n * 0.02; lo++);
+  for (acc = 0; hi > 0 && (acc += hist[hi]) < n * 0.02; hi--);
+  const span = Math.max(1, hi - lo);
+  for (let i = 0; i < d.length; i += 4) { const v = Math.max(0, Math.min(255, (d[i] - lo) * 255 / span)); d[i] = d[i + 1] = d[i + 2] = v; }
+  g.putImageData(im, 0, 0);
+  return c;
+}
+const mixCost = (a, b) => a === b ? 0 : OCR_MIX.some(x => x.includes(a) && x.includes(b)) ? 0.3 : 1;
+function ocrDist(a, b, max){
+  const n = a.length, m = b.length;
+  if (Math.abs(n - m) > max) return max + 1;
+  let prev = [], cur = [];
+  for (let j = 0; j <= m; j++) prev[j] = j;
+  for (let i = 1; i <= n; i++) {
+    cur = [i]; let best = i;
+    for (let j = 1; j <= m; j++) { const v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + mixCost(a[i - 1], b[j - 1])); cur[j] = v; if (v < best) best = v; }
+    if (best > max) return max + 1;
+    prev = cur;
+  }
+  return prev[m];
+}
+// words of the text that look like a technical code: letters, digits and dashes, with digits in them
+function ocrTokens(text){
+  const out = new Set();
+  const clean = t => t.toUpperCase().replace(/[^A-Z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  for (const line of String(text || "").split(/\n+/)) {
+    const w = line.trim().split(/\s+/).map(clean).filter(Boolean);
+    for (let i = 0; i < w.length; i++) { out.add(w[i]); if (i + 1 < w.length) { out.add(w[i] + w[i + 1]); out.add(w[i] + "-" + w[i + 1]); } }
+  }
+  return Array.from(out).filter(t => t.length >= 6 && t.length <= 22 && (t.match(/[0-9]/g) || []).length >= 3);
+}
+function ocrMatch(text){
+  if (!ocrIndex && typeof WS_PARTS !== "undefined") ocrIndex = Object.keys(WS_PARTS.p).map(k => [k, k.replace(/-/g, "")]);
+  const toks = ocrTokens(text), hit = new Map();
+  for (const t of toks) {
+    const x = partLookup(t);
+    if (x && !x.sim) { hit.set(x.code, 0); continue; }
+    const f = t.replace(/-/g, ""), max = f.length >= 10 ? 2 : 1.3;
+    for (const [k, kf] of ocrIndex || []) {
+      const dd = ocrDist(f, kf, max) + (k.includes("-") === t.includes("-") ? 0 : 0.1);
+      if (dd <= max && (!hit.has(k) || dd < hit.get(k))) hit.set(k, dd);
+    }
+  }
+  const list = Array.from(hit.entries()).sort((a, b) => a[1] - b[1]);
+  const best = list.length ? list[0][1] : 0;
+  return {codes: list.filter(e => e[1] <= best + 1).slice(0, 4), raw: toks.sort((a, b) => (/^[A-Z0-9]{2,6}-[A-Z0-9]{5,}/.test(b) - /^[A-Z0-9]{2,6}-[A-Z0-9]{5,}/.test(a)) || b.length - a.length)[0] || ""};
+}
+function ocrShow(r){
+  const box = $("#ocrBox");
+  if (r.codes.length) {
+    $("#ocrTitle").innerHTML = r.codes.length === 1 && r.codes[0][1] === 0 ? "کد خوانده شد. با برچسب مقایسه کنید و بزنید تا ثبت شود:" : "کدی که روی برچسب است کدام است؟ بزنید تا ثبت شود:";
+    $("#ocrList").innerHTML = r.codes.map(([k, dd], i) => { const x = partLookup(k);
+      return '<button type="button" class="btn ghost ocrc' + (i === 0 && dd === 0 ? " best" : "") + '" data-code="' + esc(k) + '">' + code(k) + (x ? "<small>" + esc(x.name) + (x.cars.length ? " · " + esc(x.cars.slice(0, 3).join("، ")) : "") + "</small>" : "") + "</button>"; }).join("");
+    box.hidden = false; say("کد پیشنهادی را با برچسب مقایسه کنید.", "info");
+    try { box.scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e) {}
+  } else if (r.raw) {
+    box.hidden = true; $("#manual").value = r.raw; $("#manual").focus();
+    fail("کد " + code(r.raw) + " خوانده شد ولی در فهرست قطعات نیست. در خانه تایپ با برچسب مقایسه و اصلاح کنید، بعد «ثبت».");
+  } else {
+    box.hidden = true;
+    fail("کدی خوانده نشد. برچسب را صاف، نزدیک (حدود ۱۰ سانت) و با نور کافی جلوی دوربین بگیرید و دوباره بزنید، یا کد را تایپ کنید.");
+  }
+}
+async function ocrRun(src){
+  if (ocrBusy) return;
+  ocrBusy = true; $("#ocrBtn").disabled = true; $("#ocrBox").hidden = true;
+  say(ocrWorker ? "در حال خواندن متن برچسب…" : "در حال آماده کردن خواننده متن (بار اول چند ثانیه)…", "info");
+  try {
+    const w = await ocrInit();
+    say("در حال خواندن متن برچسب…", "info");
+    const {data} = await w.recognize(ocrCanvas(src));
+    ocrShow(ocrMatch(data.text));
+  } catch(e) {
+    fail(ocrWorker ? "متن خوانده نشد. دوباره امتحان کنید یا کد را تایپ کنید." : "خواننده متن بار نشد. یک بار با اینترنت برنامه را باز کنید، بعد بدون اینترنت هم کار می‌کند.");
+  } finally { ocrBusy = false; $("#ocrBtn").disabled = false; }
+}
 async function decodeImage(file){
   await initDecoder();
   const bmp = await createImageBitmap(file);
@@ -1344,6 +1463,11 @@ $$("nav button").forEach(b => b.addEventListener("click", () => { show(b.dataset
 $$(".filters button").forEach(b => b.addEventListener("click", () => { listFilter = b.dataset.f; $$(".filters button").forEach(x => x.setAttribute("aria-pressed", x === b)); render(); }));
 $("#camStart").addEventListener("click", startCam);
 $("#photoBtn").addEventListener("click", () => stopCam());
+$("#ocrBtn").addEventListener("click", () => { if (scanning && video.videoWidth) ocrRun(video); else $("#ocrIn").click(); });
+$("#ocrIn").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { ocrRun(await createImageBitmap(f)); } catch(err) { fail("عکس خوانده نشد."); } });
+$("#ocrList").addEventListener("click", e => { const b = e.target.closest("button[data-code]"); if (!b) return; $("#ocrBox").hidden = true; onScan(b.dataset.code, "ocr"); });
+$("#ocrNone").addEventListener("click", () => { $("#ocrBox").hidden = true; $("#manual").focus(); say("کد را از روی برچسب تایپ کنید و «ثبت» را بزنید.", "info"); });
 $("#photoIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) scanPhoto(f); });
 $("#camStop").addEventListener("click", stopCam);
 $("#torchBtn").addEventListener("click", () => { if (!track) return; torchOn = !torchOn; track.applyConstraints({advanced:[{torch: torchOn}]}).catch(() => {}); });
@@ -1825,8 +1949,11 @@ async function secBoot(){
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
 // inside Bale, Telegram or another app's web view the app's storage is not kept between openings
 $("#inAppWarn").hidden = !/; wv\)|Telegram|Bale|Instagram|FBA[NV]/i.test(navigator.userAgent || "");
+// the text reader is about 7 MB: fetch it once in the background while there is internet, so it also works offline
+if (load(K_OCR, "") !== "1" && navigator.onLine !== false && window.isSecureContext)
+  setTimeout(() => { if (!ocrWorker && !ocrBusy) ocrInit().then(w => { if (!ocrBusy) { w.terminate(); ocrWorker = null; ocrLoading = null; } }).catch(() => {}); }, 15000);
 window.__wsc = {onScan, setMode, state: () => st, records: () => records, events: () => events, sec: () => sec, settings: () => settings, finishDoc, list: () => recList,
-  sugItems, lineFlags, pkey, lkey, devFp: () => devFp, certState, secCheck};
+  sugItems, lineFlags, pkey, lkey, devFp: () => devFp, certState, secCheck, ocrMatch, ocrTokens, ocrInit};
 if (DOC_MODES.has(st.mode)) st.step = "doc";
 if (secOn()) { render(); secBoot(); }
 else {
