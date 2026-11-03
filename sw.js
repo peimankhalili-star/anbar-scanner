@@ -1,11 +1,11 @@
 // Offline cache for the warehouse scanner. Bump CACHE when any file changes.
 // Pages and small scripts: network first (a new version shows on the next open when there is internet),
 // cache when offline or slow. Large files that never change (barcode reader, fonts, icons): cache first.
-const CACHE = "wsc-v8.6";
+const CACHE = "wsc-v8.7";
 // the text reader (ocr/, about 7 MB) never changes between app versions: its own cache, kept across updates
 const OCR_CACHE = "wsc-ocr-1";
 const FILES = ["./", "index.html", "locations.js", "zxing-reader.js", "zxing_reader.wasm", "manifest.webmanifest",
-  "icon-192.png", "icon-512.png", "Vazirmatn-Regular.woff2", "Vazirmatn-Bold.woff2", "report.html", "parts.js", "wsc-crypto.js", "qrcode.js"];
+  "icon-192.png", "icon-512.png", "Vazirmatn-Regular.woff2", "Vazirmatn-Bold.woff2", "report.html", "parts.js", "wsc-crypto.js", "qrcode.js", "zxing-worker.js"];
 const STATIC = /(\.wasm|\.woff2|\.png|zxing-reader\.js)$/;
 
 self.addEventListener("install", e => {

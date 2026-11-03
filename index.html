@@ -445,7 +445,7 @@ let records = load(K_REC, []);
 // works only with a certificate the manager signed; every record and every event is chained to the one
 // before it (SHA-256) and each exported file is signed with this phone's own key, so the report page can
 // tell a genuine, complete file from an edited, forged or partial one.
-const APP_VER = "8.6";
+const APP_VER = "8.7";
 const K_EV = "wsc.events.v1";
 const ZERO = "0".repeat(64);
 const ALL_MODES = ["addr", "rcv", "put", "iss", "out", "ret", "move", "count"];
@@ -1128,25 +1128,86 @@ const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d", {willReadFrequently:true});
 // Two readers: the phone's own (BarcodeDetector, needs Google Play services) and the bundled
 // zxing reader. Frames alternate between them; the phone's reader is dropped after repeated errors.
-let wasmOk = false, nativeErrors = 0, frameNo = 0;
-const diag = {frames:0, hits:0, ms:0, err:""};
-async function initDecoder(){
-  if (!wasmReady) {
-    wasmReady = ZXingWASM.prepareZXingModule({
-      overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", location.href).href : prefix + path },
-      fireImmediately: true
-    }).then(() => { wasmOk = true; }).catch(e => { diag.err = "zxing: " + ((e && e.message) || e); });
+let wasmOk = false, nativeErrors = 0, frameNo = 0, detectorAll = null;
+const LINEAR_NATIVE = ["code_128", "code_39", "code_93", "codabar", "ean_13", "ean_8", "itf", "upc_a", "upc_e"];
+const LIVE_OPTS = {tryHarder: true, formats: ["Linear-Codes"], maxNumberOfSymbols: 1};
+const PHOTO_OPTS = {tryHarder: true, maxNumberOfSymbols: 3};
+// zxing runs in zxing-worker.js; if the worker cannot start, on this page as before
+let zw = null, zwSeq = 0;
+const zwWait = new Map();
+function zxWorker(){
+  if (zw === null) {
+    try {
+      zw = new Worker("zxing-worker.js");
+      zw.onmessage = e => { const f = zwWait.get(e.data.id); if (f) { zwWait.delete(e.data.id); f(e.data.ok === false ? null : (e.data.texts || []), e.data); } };
+      zw.onerror = () => { zw = false; zwWait.forEach(f => f(null)); zwWait.clear(); };
+    } catch(e) { zw = false; }
   }
+  return zw || null;
+}
+// a frame goes as a bitmap (pixels read in the worker) or as ImageData
+async function zxRead(imageData, opts, bmp){
+  const w = zxWorker();
+  if (w) {
+    const id = ++zwSeq;
+    const texts = await new Promise(res => {
+      zwWait.set(id, (t, d) => {
+        // three empty frames in a row: this phone's bitmaps are blank, so read the pixels on the page instead
+        if (bmp) { zwBlank = d && d.blank ? zwBlank + 1 : 0; if (zwBlank >= 3) zwOffscreen = false; }
+        res(t);
+      });
+      if (bmp) w.postMessage({id, bmp, opts}, [bmp]);
+      else w.postMessage({id, w: imageData.width, h: imageData.height, buf: imageData.data.buffer, opts}, [imageData.data.buffer]);
+      setTimeout(() => { if (zwWait.has(id)) { zwWait.delete(id); res([]); } }, 5000);
+    });
+    if (texts) return texts;
+    zw.terminate(); zw = false;       // the worker broke: carry on in the page
+    if (bmp) return [];
+  }
+  if (bmp || !imageData) return [];
+  if (!(await mainZxReady())) return [];
+  const res = await ZXingWASM.readBarcodes(imageData, opts);
+  return res.filter(r => r.isValid && r.text).map(r => r.text);
+}
+const diag = {frames:0, hits:0, ms:0, err:""};
+// the page's own copy of zxing is loaded only when the worker cannot run (it would double the memory)
+let mainZx = null;
+function mainZxReady(){
+  if (!mainZx) mainZx = ZXingWASM.prepareZXingModule({
+    overrides: { locateFile: (path, prefix) => path.endsWith(".wasm") ? new URL("zxing_reader.wasm", location.href).href : prefix + path },
+    fireImmediately: true
+  }).then(() => true).catch(e => { diag.err = "zxing: " + ((e && e.message) || e); return false; });
+  return mainZx;
+}
+let zwOffscreen = false, zwBlank = 0;
+function zxPing(w){
+  return new Promise(res => {
+    const id = ++zwSeq; zwWait.set(id, (t, d) => { zwOffscreen = !!(d && d.offscreen); res(t !== null); });
+    w.postMessage({id, ping: true});
+    setTimeout(() => { if (zwWait.has(id)) { zwWait.delete(id); res(false); } }, 10000);
+  });
+}
+async function initDecoder(){
+  if (!wasmReady) wasmReady = (async () => {
+    const w = zxWorker();
+    if (w && await zxPing(w)) { wasmOk = true; return; }
+    if (zw) zw.terminate();
+    zw = false;
+    wasmOk = await mainZxReady();
+  })();
   try {
     if (!detector && "BarcodeDetector" in window) {
       const fm = await BarcodeDetector.getSupportedFormats();
-      if (fm && fm.length) detector = new BarcodeDetector({formats: fm});
+      // the live camera looks for line barcodes only (locations, parts, reception slips): far less work per frame,
+      // and the anti-counterfeit QR beside the part barcode is never picked up; a photo still reads every kind
+      const lin = (fm || []).filter(f => LINEAR_NATIVE.includes(f));
+      if (fm && fm.length) { detector = new BarcodeDetector({formats: lin.length ? lin : fm}); detectorAll = new BarcodeDetector({formats: fm}); }
     }
-  } catch(e) { detector = null; diag.err = "native: " + (e && e.name); }
+  } catch(e) { detector = null; detectorAll = null; diag.err = "native: " + (e && e.name); }
   await wasmReady;
   if (!wasmOk && !detector) throw new Error("no barcode reader");
 }
-function engineName(){ return (detector ? "phone" : "") + (detector && wasmOk ? "+" : "") + (wasmOk ? "zxing" : ""); }
+function engineName(){ return (detector ? "phone" : "") + (detector && wasmOk ? "+" : "") + (wasmOk ? (zw ? "zxing-worker" : "zxing") : ""); }
 // One count per appearance: a code counts again only after it has been out of view
 // for GAP_FRAMES processed frames, and never sooner than MIN_GAP_MS after its last count.
 const GAP_FRAMES = 3, MIN_GAP_MS = 1000;
@@ -1177,7 +1238,8 @@ async function startCam(){
   try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch(e) {}
   try {
     await initDecoder();
-    stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:1920}, height:{ideal:1080}}});
+    // 1280 x 720 is plenty for a label 8 to 10 cm away, and half the work of 1920 x 1080 on a weak phone
+    stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:"environment"}, width:{ideal:1280}, height:{ideal:720}}});
   } catch(e) {
     $("#camMsg").textContent = e && e.name === "NotAllowedError" ? "اجازه دوربین داده نشد. از تنظیمات مرورگر، دوربین را برای این برنامه مجاز کنید."
       : e && e.message === "no barcode reader" ? "بارکدخوان برنامه بار نشد (" + diag.err + "). یک بار با اینترنت برنامه را باز کنید."
@@ -1202,9 +1264,9 @@ function stopCam(){
   $("#camMsg").textContent = "برای اسکن، دوربین را روشن کنید.";
   try { wakeLock && wakeLock.release(); } catch(e) {} wakeLock = null;
 }
-async function nativeScan(src, w, h){
+async function nativeScan(src, w, h, all){
   try {
-    const r = await detector.detect(src);
+    const r = await (all && detectorAll ? detectorAll : detector).detect(src);
     nativeErrors = 0;
     if (!r.length) return null;
     // several codes in view: a real code before a link (the anti-counterfeit QR), then the one nearest the centre
@@ -1216,10 +1278,9 @@ async function nativeScan(src, w, h){
     return null;
   }
 }
-async function wasmScan(imageData){
-  const res = await ZXingWASM.readBarcodes(imageData, {tryHarder: true, maxNumberOfSymbols: 3});
-  const ok = res.filter(r => r.isValid && r.text).sort((a, b) => isLink(a.text) - isLink(b.text))[0];
-  return ok ? ok.text : null;
+async function wasmScan(imageData, opts){
+  const t = (await zxRead(imageData, opts || LIVE_OPTS)).sort((a, b) => isLink(a) - isLink(b))[0];
+  return t || null;
 }
 async function scanFrame(){
   const vw = video.videoWidth, vh = video.videoHeight;
@@ -1229,10 +1290,17 @@ async function scanFrame(){
   let text = null;
   if (detector && (!wasmOk || frameNo % 2 === 0)) text = await nativeScan(video, vw, vh);
   else if (wasmOk) {
-    const cw = vw, ch = Math.round(vh * 0.7);
-    canvas.width = cw; canvas.height = ch;
-    ctx.drawImage(video, 0, (vh - ch) / 2, cw, ch, 0, 0, cw, ch);
-    text = await wasmScan(ctx.getImageData(0, 0, cw, ch));
+    // only the part inside the guide, at most 960 px wide
+    const cw = Math.round(vw * 0.94), ch = Math.round(vh * 0.7), k = Math.min(1, 960 / cw);
+    const W = Math.round(cw * k), H = Math.round(ch * k);
+    if (zw && zwOffscreen) {
+      const bmp = await createImageBitmap(video, Math.round((vw - cw) / 2), Math.round((vh - ch) / 2), cw, ch, {resizeWidth: W, resizeHeight: H});
+      text = (await zxRead(null, LIVE_OPTS, bmp))[0] || null;
+    } else {
+      canvas.width = W; canvas.height = H;
+      ctx.drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, W, H);
+      text = await wasmScan(ctx.getImageData(0, 0, W, H));
+    }
   }
   diag.frames++; diag.ms = Math.round(performance.now() - t0); if (text) diag.hits++;
   return text;
@@ -1249,7 +1317,7 @@ setInterval(showDiag, 700);
 // Tesseract (files in ocr/, kept on the phone after the first use) reads the label's text. Every word is matched
 // against the parts list, allowing for the letters it mixes up (0/O, 1/I, 5/S, 8/B, 2/Z, 6/G); nothing is saved
 // until the colleague taps the right code. A code that is not in the list goes to the typing box to be checked.
-let ocrWorker = null, ocrLoading = null, ocrIndex = null, ocrBusy = false;
+let ocrWorker = null, ocrLoading = null, ocrIndex = null, ocrBusy = false, ocrIdle = null;
 const OCR_MIX = ["0OQD", "1IL", "5S", "8B", "2Z", "6G", "4A", "7T"];
 function loadScript(src){ return new Promise((res, rej) => { const el = document.createElement("script"); el.src = src; el.onload = res; el.onerror = () => rej(new Error(src)); document.head.appendChild(el); }); }
 function ocrInit(){
@@ -1259,7 +1327,6 @@ function ocrInit(){
     const base = new URL("ocr/", location.href).href;
     const w = await Tesseract.createWorker("eng", 1, {workerPath: base + "worker.min.js", corePath: base, langPath: base, gzip: true, workerBlobURL: false});
     await w.setParameters({tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-", tessedit_pageseg_mode: "11", user_defined_dpi: "300"});
-    store(K_OCR, "1");
     ocrWorker = w; return w;
   })().catch(e => { ocrLoading = null; throw e; });
   return ocrLoading;
@@ -1347,20 +1414,36 @@ async function ocrRun(src){
   try {
     const w = await ocrInit();
     say("در حال خواندن متن برچسب…", "info");
-    const {data} = await w.recognize(ocrCanvas(src));
+    const cv = ocrCanvas(src);
+    if (src.close) src.close();
+    const {data} = await w.recognize(cv);
+    cv.width = cv.height = 1;
     ocrShow(ocrMatch(data.text));
   } catch(e) {
     fail(ocrWorker ? "متن خوانده نشد. دوباره امتحان کنید یا کد را تایپ کنید." : "خواننده متن بار نشد. یک بار با اینترنت برنامه را باز کنید، بعد بدون اینترنت هم کار می‌کند.");
-  } finally { ocrBusy = false; $("#ocrBtn").disabled = false; }
+  } finally {
+    ocrBusy = false; $("#ocrBtn").disabled = false;
+    // the reader holds a lot of memory: let it go after two idle minutes (it starts again in a few seconds)
+    clearTimeout(ocrIdle); ocrIdle = setTimeout(() => { if (ocrWorker && !ocrBusy) { ocrWorker.terminate(); ocrWorker = null; ocrLoading = null; } }, 120000);
+  }
+}
+// a phone photo is 12 MP or more: decode it straight at a smaller size and free it at once
+async function photoBitmap(file, maxSide){
+  const probe = await createImageBitmap(file);
+  const k = Math.min(1, maxSide / Math.max(probe.width, probe.height));
+  if (k === 1) return probe;
+  const w = Math.round(probe.width * k); probe.close();
+  try { return await createImageBitmap(file, {resizeWidth: w, resizeQuality: "high"}); }
+  catch(e) { return createImageBitmap(file); }
 }
 async function decodeImage(file){
   await initDecoder();
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
-  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
-  canvas.width = w; canvas.height = h; ctx.drawImage(bmp, 0, 0, w, h);
-  let text = detector ? await nativeScan(canvas, w, h) : null;
-  if ((!text || isLink(text)) && wasmOk) { const t2 = await wasmScan(ctx.getImageData(0, 0, w, h)); if (t2 && (!text || !isLink(t2))) text = t2; }
+  const bmp = await photoBitmap(file, 2400);
+  const w = bmp.width, h = bmp.height;
+  canvas.width = w; canvas.height = h; ctx.drawImage(bmp, 0, 0, w, h); bmp.close();
+  let text = detectorAll ? await nativeScan(canvas, w, h, true) : null;
+  if (!text || isLink(text)) { const t2 = await wasmScan(ctx.getImageData(0, 0, w, h), PHOTO_OPTS); if (t2 && (!text || !isLink(t2))) text = t2; }
+  canvas.width = canvas.height = 1;
   return text;
 }
 async function scanPhoto(file){
@@ -1373,12 +1456,14 @@ async function scanPhoto(file){
 }
 async function loop(){
   if (!scanning) return;
-  if (video.readyState >= 2 && !busy) {
+  // the text reader needs the whole phone for a moment: no barcode frames while it works
+  if (video.readyState >= 2 && !busy && !ocrBusy) {
     busy = true;
     try { onFrame(await scanFrame()); } catch(e) {}
     busy = false;
   }
-  setTimeout(loop, detector ? 80 : 140);
+  // a slow phone gets a breather as long as the last frame took, so the screen never queues up behind the reader
+  setTimeout(loop, Math.max(detector ? 80 : 140, Math.min(600, diag.ms)));
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopCam(); });
 
@@ -1465,7 +1550,7 @@ $("#camStart").addEventListener("click", startCam);
 $("#photoBtn").addEventListener("click", () => stopCam());
 $("#ocrBtn").addEventListener("click", () => { if (scanning && video.videoWidth) ocrRun(video); else $("#ocrIn").click(); });
 $("#ocrIn").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
-  try { ocrRun(await createImageBitmap(f)); } catch(err) { fail("عکس خوانده نشد."); } });
+  try { await ocrRun(await photoBitmap(f, 1800)); } catch(err) { fail("عکس خوانده نشد."); } });
 $("#ocrList").addEventListener("click", e => { const b = e.target.closest("button[data-code]"); if (!b) return; $("#ocrBox").hidden = true; onScan(b.dataset.code, "ocr"); });
 $("#ocrNone").addEventListener("click", () => { $("#ocrBox").hidden = true; $("#manual").focus(); say("کد را از روی برچسب تایپ کنید و «ثبت» را بزنید.", "info"); });
 $("#photoIn").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) scanPhoto(f); });
@@ -1949,9 +2034,19 @@ async function secBoot(){
 if ("serviceWorker" in navigator && window.isSecureContext) navigator.serviceWorker.register("sw.js").catch(() => {});
 // inside Bale, Telegram or another app's web view the app's storage is not kept between openings
 $("#inAppWarn").hidden = !/; wv\)|Telegram|Bale|Instagram|FBA[NV]/i.test(navigator.userAgent || "");
-// the text reader is about 7 MB: fetch it once in the background while there is internet, so it also works offline
-if (load(K_OCR, "") !== "1" && navigator.onLine !== false && window.isSecureContext)
-  setTimeout(() => { if (!ocrWorker && !ocrBusy) ocrInit().then(w => { if (!ocrBusy) { w.terminate(); ocrWorker = null; ocrLoading = null; } }).catch(() => {}); }, 15000);
+// the text reader is about 7 MB: download its files once in the background while there is internet (the service worker
+// keeps them), so it also works offline. Only the files are fetched; the reader itself starts when the button is used.
+if (load(K_OCR, "") !== "2" && navigator.onLine !== false && window.isSecureContext && "serviceWorker" in navigator)
+  setTimeout(async () => {
+    try {
+      await navigator.serviceWorker.ready;
+      const simd = WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11]));
+      for (const f of ["tesseract.min.js", "worker.min.js", simd ? "tesseract-core-simd-lstm.wasm.js" : "tesseract-core-lstm.wasm.js", "eng.traineddata.gz"]) {
+        const r = await fetch("ocr/" + f); if (!r.ok) throw new Error(f); await r.arrayBuffer();
+      }
+      store(K_OCR, "2");
+    } catch(e) {}
+  }, 20000);
 window.__wsc = {onScan, setMode, state: () => st, records: () => records, events: () => events, sec: () => sec, settings: () => settings, finishDoc, list: () => recList,
   sugItems, lineFlags, pkey, lkey, devFp: () => devFp, certState, secCheck, ocrMatch, ocrTokens, ocrInit};
 if (DOC_MODES.has(st.mode)) st.step = "doc";
